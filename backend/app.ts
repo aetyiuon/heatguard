@@ -215,7 +215,18 @@ export async function handleRequest(request: Request, env: Env = {}): Promise<Re
       else if (url.pathname === '/relief') {
         const district = url.searchParams.get('district');
         const city = url.searchParams.get('city');
-        if ((district === 'tx06' || district === 'tx30') && city === null)
+        const county = url.searchParams.get('county');
+        const scopeCount = ['district', 'city', 'county'].reduce(
+          (count, key) => count + url.searchParams.getAll(key).length,
+          0,
+        );
+        if (scopeCount > 1)
+          response = json({ error: 'Choose exactly one city, county, or district scope.' }, 400);
+        else if (county === 'dallas')
+          response = json(await bundledCity('dallas-county'), 200, true);
+        else if (county !== null)
+          response = json({ error: 'Provide a supported county: dallas.' }, 400);
+        else if ((district === 'tx06' || district === 'tx30') && city === null)
           response = json(await bundledCity(district), 200, true);
         else if (district !== null)
           response = json(

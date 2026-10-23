@@ -108,7 +108,8 @@ export interface ReliefTrail {
 }
 export type CityId = 'arlington' | 'dallas';
 export type DistrictId = 'tx06' | 'tx30';
-export type MappedAreaId = CityId | DistrictId;
+export type CountyId = 'dallas-county';
+export type MappedAreaId = CityId | DistrictId | CountyId;
 export type MapScope = MappedAreaId | 'nearby';
 export type PolygonCoordinates = [number, number][][][];
 export interface MappedPark {
@@ -132,7 +133,7 @@ export interface CoverageRegion {
 }
 export interface CityDataset {
   city: MappedAreaId;
-  areaType?: 'city' | 'congressional-district';
+  areaType?: 'city' | 'congressional-district' | 'county';
   boundaryLabel?: string;
   boundaryVersion?: string;
   regions?: CoverageRegion[];

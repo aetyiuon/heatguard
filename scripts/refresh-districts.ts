@@ -7,6 +7,7 @@ import { polygonClipping, osmToGeoJSON } from './geometry-vendor';
 import {
   CityDataset,
   DistrictId,
+  CountyId,
   CoverageRegion,
   MappedPark,
   PolygonCoordinates,
@@ -16,7 +17,8 @@ import {
 import { insidePolygons, polygonBounds } from '../src/domain/cities';
 import { distanceMeters } from '../src/domain/relief';
 import { normalizeOsmPins } from '../backend/relief';
-import { allFeatures } from './refresh-cities';
+import { allFeatures, spatialQueryLoader } from './refresh-cities';
+import { countyTrails, NCTCOG_TRAILS, garlandShelters, GARLAND_PAVILIONS } from './county-sources';
 import {
   districtSections,
   geometryPolygons,
@@ -37,8 +39,9 @@ const TPWD_STRUCTURES =
   'https://services1.arcgis.com/1mtXwieMId59thmg/arcgis/rest/services/Texas_State_Parks_Public_Areas/FeatureServer/1';
 const PADUS =
   'https://services.arcgis.com/v01gqwM5QqNysAAi/ArcGIS/rest/services/PADUS_Public_Access/FeatureServer/0';
-const DISTRICTS = {
+const AREAS = {
   tx06: {
+    type: 'district',
     number: 6,
     geoid: '4806',
     counties: [
@@ -53,10 +56,11 @@ const DISTRICTS = {
       'Tarrant',
     ],
   },
-  tx30: { number: 30, geoid: '4830', counties: ['Dallas', 'Tarrant'] },
-} satisfies Record<DistrictId, { number: number; geoid: string; counties: string[] }>;
+  tx30: { type: 'district', number: 30, geoid: '4830', counties: ['Dallas', 'Tarrant'] },
+  'dallas-county': { type: 'county', geoid: '48113', counties: ['Dallas'] },
+} as const;
 const runFile = promisify(execFile);
-const json = async (url: string) => {
+const fetchJson = async (url: string) => {
   let data: any;
   try {
     const response = await fetch(url, {
@@ -92,6 +96,17 @@ const json = async (url: string) => {
   }
   if (data.error) throw new Error(data.error.message);
   return data;
+};
+const json = async (url: string): Promise<any> => {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fetchJson(url);
+    } catch (error) {
+      if (attempt >= 2) throw error;
+      console.log(`Retrying public GIS request (${attempt + 1}/2):`, url.split('?')[0]);
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+    }
+  }
 };
 async function cached(cacheDir: URL, name: string, get: () => Promise<any>) {
   const file = new URL(name + '.json', cacheDir);
@@ -159,7 +174,7 @@ async function section(
     ];
   } catch (error) {
     if (depth >= (process.argv.includes('--no-split') ? 0 : 2))
-      throw new Error(`Incomplete ${kind} section ${bbox}; previous district snapshot retained.`);
+      throw new Error(`Incomplete ${kind} section ${bbox}; previous area snapshot retained.`);
     const x = (w + e) / 2,
       y = (s + n) / 2,
       results = [];
@@ -183,26 +198,34 @@ function normalizedPaths(geometry: any): [number, number][][] {
   if (geometry?.type === 'MultiLineString') return geometry.coordinates;
   return [];
 }
-export async function buildDistrict(district: DistrictId, includeOsm = true): Promise<CityDataset> {
-  const config = DISTRICTS[district];
-  const label = `TX-${String(config.number).padStart(2, '0')}`;
-  const cacheDir = new URL(`../work/${district}-raw/`, import.meta.url);
+export async function buildMappedArea(
+  area: DistrictId | CountyId,
+  includeOsm = true,
+): Promise<CityDataset> {
+  const config = AREAS[area];
+  const isCounty = config.type === 'county';
+  const label = isCounty ? 'Dallas County' : `TX-${String(config.number).padStart(2, '0')}`;
+  const boundaryLayer = isCounty ? COUNTIES : DISTRICT;
+  const boundaryVersion = isCounty
+    ? 'U.S. Census BAS 2026 · Dallas County, Texas (48113)'
+    : '119th Congress (2025–2027) · Census BAS 2026';
+  const cacheDir = new URL(`../work/${area}-raw/`, import.meta.url);
   await mkdir(cacheDir, { recursive: true });
   const fetchedAt = new Date().toISOString();
-  const meta = await json(`${DISTRICT}?f=json`);
-  if (meta.name !== '119th Congressional Districts')
+  const meta = await json(`${boundaryLayer}?f=json`);
+  if (!isCounty && meta.name !== '119th Congressional Districts')
     throw new Error('Census layer changed; select the 119th Congress explicitly.');
-  const raw = await cached(cacheDir, 'district119', () =>
+  const raw = await cached(cacheDir, isCounty ? 'county48113' : 'district119', () =>
     json(
-      `${DISTRICT}/query?${new URLSearchParams({ f: 'geojson', where: `GEOID='${config.geoid}'`, outFields: 'GEOID,CDSESSN,NAME,CD119', outSR: '4326', returnGeometry: 'true', geometryPrecision: '6', maxAllowableOffset: '0.00003' })}`,
+      `${boundaryLayer}/query?${new URLSearchParams({ f: 'geojson', where: `GEOID='${config.geoid}'`, outFields: isCounty ? 'GEOID,BASENAME' : 'GEOID,CDSESSN,NAME,CD119', outSR: '4326', returnGeometry: 'true', geometryPrecision: '6', maxAllowableOffset: '0.00003' })}`,
     ),
   );
   if (
     raw.features?.length !== 1 ||
-    raw.features[0].properties.CDSESSN !== '119' ||
+    (!isCounty && raw.features[0].properties.CDSESSN !== '119') ||
     raw.features[0].properties.GEOID !== config.geoid
   )
-    throw new Error(`Missing exact 119th Congress ${label} boundary`);
+    throw new Error(`Missing exact ${label} boundary`);
   const boundary = geometryPolygons(raw.features[0].geometry),
     bounds = polygonBounds(boundary),
     clipLines = lineClipper(boundary);
@@ -213,7 +236,7 @@ export async function buildDistrict(district: DistrictId, includeOsm = true): Pr
   );
   if (countiesRaw.features?.length !== config.counties.length || countiesRaw.exceededTransferLimit)
     throw new Error('County response incomplete');
-  const regions: CoverageRegion[] = countiesRaw.features
+  let regions: CoverageRegion[] = countiesRaw.features
     .map((f: any) => {
       const p = intersectPolygons(boundary, geometryPolygons(f.geometry));
       if (!p.length) throw new Error(`County ${f.properties.BASENAME} did not intersect district`);
@@ -231,7 +254,11 @@ export async function buildDistrict(district: DistrictId, includeOsm = true): Pr
     .sort((a: CoverageRegion, b: CoverageRegion) => a.name.localeCompare(b.name));
   const sections = districtSections(boundary);
   const sources: CityDataset['sources'] = [
-    { name: `U.S. Census · 119th Congress ${label} (BAS 2026)`, url: DISTRICT, records: 1 },
+    {
+      name: `U.S. Census · ${isCounty ? 'Dallas County' : '119th Congress ' + label} (BAS 2026)`,
+      url: boundaryLayer,
+      records: 1,
+    },
     {
       name: `U.S. Census · ${regions.length} intersecting Texas counties`,
       url: COUNTIES,
@@ -243,14 +270,7 @@ export async function buildDistrict(district: DistrictId, includeOsm = true): Pr
     JSON.stringify({ bounds, counties: regions.map((r) => r.name), sections: sections.length }),
   );
   // allFeatures appends query parameters, so inject the spatial filter into its loader instead.
-  const spatialLoader = (url: string) => {
-    const q = new URL(url);
-    q.searchParams.set('geometry', bounds.join(','));
-    q.searchParams.set('geometryType', 'esriGeometryEnvelope');
-    q.searchParams.set('inSR', '4326');
-    q.searchParams.set('spatialRel', 'esriSpatialRelIntersects');
-    return json(q.toString());
-  };
+  const spatialLoader = spatialQueryLoader(bounds, json);
   const stateParks = await cached(cacheDir, 'tpwd-parks', () =>
     allFeatures(TPWD_PARKS, 'OBJECTID,ParkName', '1=1', true, spatialLoader),
   );
@@ -281,7 +301,12 @@ export async function buildDistrict(district: DistrictId, includeOsm = true): Pr
       spatialLoader,
     ),
   );
-  const localityShapes: { id: string; name: string; polygons: PolygonCoordinates }[] = [];
+  const localityShapes: {
+    id: string;
+    name: string;
+    polygons: PolygonCoordinates;
+    partial: boolean;
+  }[] = [];
   for (const layer of [11, 12]) {
     const rawPlaces = await cached(cacheDir, `places-${layer}`, () =>
       allFeatures(
@@ -299,6 +324,7 @@ export async function buildDistrict(district: DistrictId, includeOsm = true): Pr
           id: f.properties.GEOID,
           name: f.properties.BASENAME,
           polygons: shape,
+          partial: polygonArea(shape) / polygonArea(geometryPolygons(f.geometry)) < 0.99999,
         });
     }
   }
@@ -310,9 +336,80 @@ export async function buildDistrict(district: DistrictId, includeOsm = true): Pr
     url: PLACES,
     records: localities.length,
   });
+  if (isCounty) {
+    regions = localityShapes.map((place) => ({
+      id: place.id,
+      name: place.name,
+      polygons: place.polygons,
+      bounds: polygonBounds(place.polygons),
+      partial: place.partial,
+      pinCount: 0,
+      parkCount: 0,
+      trailCount: 0,
+    }));
+    const remainder = polygonClipping.difference(boundary, ...regions.map((r) => r.polygons));
+    if (polygonArea(remainder) > 1e-10)
+      regions.push({
+        id: '48113-unincorporated',
+        name: 'Unincorporated / other county areas',
+        polygons: remainder,
+        bounds: polygonBounds(remainder),
+        partial: false,
+        pinCount: 0,
+        parkCount: 0,
+        trailCount: 0,
+      });
+    regions.sort((a, b) => a.name.localeCompare(b.name));
+  }
   const parks: MappedPark[] = [],
     trails: ReliefTrail[] = [],
     pins: ReliefPin[] = [];
+  if (isCounty) {
+    const trailMeta = await json(`${NCTCOG_TRAILS}?f=json`);
+    if (trailMeta.name !== 'Off-Street, Existing')
+      throw new Error('NCTCOG existing off-street layer changed; previous snapshot retained.');
+    const regionalTrails = await cached(cacheDir, 'nctcog-existing-offstreet', () =>
+      allFeatures(
+        NCTCOG_TRAILS,
+        'OBJECTID,Status,OnOffStr,AlignPend,Name',
+        "Status='Existing' AND OnOffStr='Off-Street'",
+        false,
+        spatialLoader,
+      ),
+    );
+    trails.push(...countyTrails(regionalTrails, clipLines));
+    sources.push({
+      name: 'NCTCOG and member local governments · existing off-street paths',
+      url: NCTCOG_TRAILS,
+      records: regionalTrails.length,
+    });
+    console.log(`${label} regional off-street paths clipped`, trails.length);
+    const pavilionMeta = await cached(cacheDir, 'garland-pavilion-layer', () =>
+      json(`${GARLAND_PAVILIONS}?f=json`),
+    );
+    if (pavilionMeta.name !== 'Pavillions' || pavilionMeta.geometryType !== 'esriGeometryPolygon')
+      throw new Error('Garland pavilion layer changed; previous snapshot retained.');
+    const pavilions = await cached(cacheDir, 'garland-pavilions', () =>
+      allFeatures(
+        GARLAND_PAVILIONS,
+        'OBJECTID,FACILITY_NAME,FACILITY_TYPE,PARK_ID,last_edited_date',
+        '1=1',
+        false,
+        spatialLoader,
+      ),
+    );
+    pins.push(
+      ...garlandShelters(pavilions, fetchedAt).filter((p) =>
+        insidePolygons(p.longitude, p.latitude, boundary),
+      ),
+    );
+    sources.push({
+      name: 'City of Garland · published pavilion footprints',
+      url: GARLAND_PAVILIONS,
+      records: pavilions.length,
+    });
+    console.log(`${label} Garland pavilion footprints collected`, pins.length);
+  }
   const cachedOsmBases: string[] = [];
   for (const f of publicParks) {
     const shape = intersectPolygons(boundary, geometryPolygons(f.geometry));
@@ -400,12 +497,15 @@ export async function buildDistrict(district: DistrictId, includeOsm = true): Pr
     const seed = JSON.parse(
       await readFile(new URL(`../src/data/${city}.json`, import.meta.url), 'utf8'),
     ) as CityDataset;
+    let usedOsm = false;
     for (const p of seed.pins)
       if (
         (p.provenance === 'municipal' || !includeOsm) &&
         insidePolygons(p.longitude, p.latitude, boundary)
-      )
+      ) {
         pins.push(p);
+        if (p.provenance === 'osm') usedOsm = true;
+      }
     for (const p of seed.parks) {
       const shape = intersectPolygons(boundary, p.polygons);
       if (shape.length) parks.push({ ...p, polygons: shape });
@@ -419,7 +519,7 @@ export async function buildDistrict(district: DistrictId, includeOsm = true): Pr
       url: seed.sources.find((s) => s.name.includes('park polygons'))!.url,
       records: seed.parks.length,
     });
-    if (!includeOsm) {
+    if (!includeOsm && usedOsm) {
       const base = seed.sources
         .find((s) => s.name.includes('(database '))
         ?.name.match(/database ([^)]+)/)?.[1];
@@ -543,7 +643,7 @@ export async function buildDistrict(district: DistrictId, includeOsm = true): Pr
     });
   if (includeOsm)
     sources.push({
-      name: `OpenStreetMap district features (database ${base})`,
+      name: `OpenStreetMap ${isCounty ? 'county' : 'district'} features (database ${base})`,
       url: 'https://www.openstreetmap.org/copyright',
       records: amenities.size + geometries.size,
     });
@@ -557,7 +657,7 @@ export async function buildDistrict(district: DistrictId, includeOsm = true): Pr
     JSON.stringify(
       {
         fetchedAt,
-        boundaryVersion: '119th Congress / Census BAS 2026',
+        boundaryVersion,
         sections,
         completed,
         providers: [...providers],
@@ -568,14 +668,14 @@ export async function buildDistrict(district: DistrictId, includeOsm = true): Pr
     ),
   );
   return {
-    city: district,
-    name: `Texas Congressional District ${config.number}`,
-    areaType: 'congressional-district',
-    boundaryLabel: `${label} · 119th Congress`,
-    boundaryVersion: '119th Congress (2025–2027) · Census BAS 2026',
+    city: area,
+    name: isCounty ? 'Dallas County' : `Texas Congressional District ${config.number}`,
+    areaType: isCounty ? 'county' : 'congressional-district',
+    boundaryLabel: isCounty ? 'Dallas County · full county boundary' : `${label} · 119th Congress`,
+    boundaryVersion,
     boundary,
     bounds,
-    boundarySource: DISTRICT,
+    boundarySource: boundaryLayer,
     fetchedAt,
     regions,
     localities,
@@ -591,22 +691,32 @@ export async function buildDistrict(district: DistrictId, includeOsm = true): Pr
     trails,
     sources,
     warnings: [
-      includeOsm
-        ? 'District-wide geographic queries completed. Published records may omit fountains, shelters and paths; empty areas do not prove that no amenities exist.'
-        : 'The full district boundary, communities, and available official park/trail layers are included. District-wide OpenStreetMap collection is incomplete; cached DFW amenity records remain dated. Fountain and shade coverage is incomplete.',
-      `119th Congress ${label} boundary (2025–2027). The 2026 election / 120th Congress map is a separate boundary version.`,
-      'Park boundaries are clipped to the district and are not shade measurements. Wooded areas indicate potential shade; water flow, hours, closures and public access remain unverified.',
+      isCounty
+        ? includeOsm
+          ? 'County-wide geographic queries completed. Published records may omit fountains, shelters and paths; empty areas do not prove that no amenities exist.'
+          : 'The full Dallas County boundary, community portions, and available official park/trail layers are included. County-wide OpenStreetMap collection is incomplete; cached DFW amenity records remain dated. Fountain and shade coverage is incomplete.'
+        : includeOsm
+          ? 'District-wide geographic queries completed. Published records may omit fountains, shelters and paths; empty areas do not prove that no amenities exist.'
+          : 'The full district boundary, communities, and available official park/trail layers are included. District-wide OpenStreetMap collection is incomplete; cached DFW amenity records remain dated. Fountain and shade coverage is incomplete.',
+      isCounty
+        ? 'Dallas County is distinct from Dallas city limits and congressional districts. Communities and crossing features are clipped to the county boundary.'
+        : `119th Congress ${label} boundary (2025–2027). The 2026 election / 120th Congress map is a separate boundary version.`,
+      'Park boundaries are clipped to the selected area and are not shade measurements. Wooded areas indicate potential shade; water flow, hours, closures and public access remain unverified.',
     ],
   };
 }
-export async function refreshDistrict(district: DistrictId, includeOsm = true) {
-  const d = await buildDistrict(district, includeOsm);
-  const target = new URL(`../src/data/${district}.json`, import.meta.url),
-    temp = new URL(`../src/data/${district}.pending`, import.meta.url);
+export const buildDistrict = (district: DistrictId, includeOsm = true) =>
+  buildMappedArea(district, includeOsm);
+export const refreshDistrict = (district: DistrictId, includeOsm = true) =>
+  refreshMappedArea(district, includeOsm);
+export async function refreshMappedArea(area: DistrictId | CountyId, includeOsm = true) {
+  const d = await buildMappedArea(area, includeOsm);
+  const target = new URL(`../src/data/${area}.json`, import.meta.url),
+    temp = new URL(`../src/data/${area}.pending`, import.meta.url);
   await writeFile(temp, JSON.stringify(d));
   await rename(temp, target);
   console.log(
-    `${district.toUpperCase()} snapshot saved`,
+    `${area.toUpperCase()} snapshot saved`,
     JSON.stringify({
       pins: d.pins.length,
       water: d.pins.filter((p) => p.kind === 'water').length,

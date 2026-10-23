@@ -16,6 +16,8 @@
     "data:district:baseline": "tsx scripts/refresh-tx06.ts --baseline",
     "data:refresh:tx30": "tsx scripts/refresh-tx30.ts",
     "data:tx30:baseline": "tsx scripts/refresh-tx30.ts --baseline",
+    "data:refresh:dallas-county": "tsx scripts/refresh-dallas-county.ts",
+    "data:dallas-county:baseline": "tsx scripts/refresh-dallas-county.ts --baseline",
     "export:web": "expo export --platform web",
     "deploy:proxy": "wrangler deploy"
   },
