@@ -1,8 +1,18 @@
 import React from 'react';
 import { View, useWindowDimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { HeatGuardState } from '../state/useHeatGuard';
-import { Button, Card, Chip, Copy, Disclaimer, Icon, Toggle, useLocale } from '../ui/components';
+import {
+  Button,
+  Card,
+  Chip,
+  Copy,
+  Disclaimer,
+  Icon,
+  IconBadge,
+  IconName,
+  Toggle,
+  useLocale,
+} from '../ui/components';
 import { C, rounded, styles } from '../ui/theme';
 import { SunBuddy } from '../ui/SunBuddy';
 import { HEAT_RISK, TIERS } from '../domain/sources';
@@ -11,7 +21,8 @@ import { Workload } from '../domain/types';
 export function Home({ s }: { s: HeatGuardState }) {
   const { t, lang } = useLocale(),
     { width } = useWindowDimensions(),
-    wide = width > 1200;
+    wide = width > 1200,
+    narrow = width < 600;
   const w = s.weather,
     r = s.risk;
   const level = w?.heatRisk === undefined ? undefined : HEAT_RISK[w.heatRisk];
@@ -28,9 +39,9 @@ export function Home({ s }: { s: HeatGuardState }) {
       ? r.window.join('–')
       : '—';
   return (
-    <View style={{ gap: 24 }}>
+    <View style={{ gap: 20 }}>
       <View style={[styles.row, { alignItems: 'center', gap: 8 }]}>
-        <View style={{ flex: 1, gap: 8 }}>
+        <View style={{ flex: 1, gap: 6 }}>
           <Copy kind="label">
             {t('A LITTLE AWARENESS. A COOLER DAY.', 'MÁS CONCIENCIA. UN DÍA MÁS FRESCO.')}
           </Copy>
@@ -44,22 +55,20 @@ export function Home({ s }: { s: HeatGuardState }) {
             )}
           </Copy>
         </View>
-        {width < 600 ? (
-          <SunBuddy size={74} concerned={Boolean(r && (r.tier >= 2 || r.stopReason))} />
+        {narrow ? (
+          <SunBuddy size={76} concerned={Boolean(r && (r.tier >= 2 || r.stopReason))} />
         ) : null}
       </View>
-      <View style={[wide ? styles.row : { gap: 20 }, { alignItems: wide ? 'stretch' : undefined }]}>
-        <LinearGradient
-          colors={['#FFF4D5', '#FFF0CF', '#FFE8B5']}
+      <View style={[wide ? styles.row : { gap: 16 }, { alignItems: wide ? 'stretch' : undefined }]}>
+        <View
           style={{
             flex: wide ? 1.65 : undefined,
-            borderRadius: 30,
-            padding: wide ? 30 : 24,
-            gap: 20,
-            overflow: 'hidden',
+            backgroundColor: C.peach,
+            borderRadius: 20,
+            padding: narrow ? 20 : 28,
+            gap: 18,
             borderColor: C.peachEdge,
             borderWidth: 2,
-            borderBottomWidth: 6,
           }}
         >
           <View style={[styles.row, { justifyContent: 'space-between', flexWrap: 'wrap' }]}>
@@ -69,7 +78,7 @@ export function Home({ s }: { s: HeatGuardState }) {
                   width: 10,
                   height: 10,
                   borderRadius: 10,
-                  backgroundColor: s.cached ? '#D58B25' : w ? C.teal : C.muted,
+                  backgroundColor: s.cached ? C.orange : w ? C.green : C.hare,
                 }}
               />
               <Copy kind="label">
@@ -83,14 +92,14 @@ export function Home({ s }: { s: HeatGuardState }) {
             <View
               style={{
                 paddingHorizontal: 12,
-                paddingVertical: 7,
-                borderRadius: 14,
+                paddingVertical: 6,
+                borderRadius: 12,
                 borderWidth: 2,
-                borderColor: '#F0D59C',
-                backgroundColor: '#FFFFFFC9',
+                borderColor: C.peachEdge,
+                backgroundColor: C.paper,
               }}
             >
-              <Copy style={{ fontSize: 12, color: C.ink, fontWeight: '800' }}>
+              <Copy style={{ fontFamily: rounded, fontSize: 13, color: C.ink, fontWeight: '800' }}>
                 {severity
                   ? lang === 'es'
                     ? severity.es
@@ -102,7 +111,7 @@ export function Home({ s }: { s: HeatGuardState }) {
           </View>
           <View style={[styles.row, { justifyContent: 'space-between', gap: 5 }]}>
             <View style={{ flex: 1, gap: 10 }}>
-              <Copy color={C.ink} style={{ fontSize: 14 }}>
+              <Copy color={C.ink} style={{ fontFamily: rounded, fontSize: 15, fontWeight: '700' }}>
                 {s.session
                   ? s.session.phase === 'break'
                     ? t('Cooling break remaining', 'Descanso restante')
@@ -115,8 +124,8 @@ export function Home({ s }: { s: HeatGuardState }) {
                   style={{
                     fontFamily: rounded,
                     fontWeight: '900',
-                    fontSize: width < 400 ? 57 : 70,
-                    lineHeight: 82,
+                    fontSize: width < 400 ? 56 : 68,
+                    lineHeight: width < 400 ? 66 : 78,
                     letterSpacing: -2,
                   }}
                 >
@@ -126,7 +135,7 @@ export function Home({ s }: { s: HeatGuardState }) {
                   <Copy color={C.ink}>{s.session ? t('mm:ss', 'mm:ss') : t('min', 'min')}</Copy>
                 ) : null}
               </View>
-              <Copy color={C.ink} style={{ fontSize: 13, lineHeight: 20, maxWidth: 360 }}>
+              <Copy color={C.ink} style={{ fontSize: 14, lineHeight: 21, maxWidth: 380 }}>
                 {r?.stopReason
                   ? lang === 'es'
                     ? t(
@@ -145,23 +154,24 @@ export function Home({ s }: { s: HeatGuardState }) {
                       )}
               </Copy>
             </View>
-            {width > 600 ? (
+            {!narrow ? (
               <SunBuddy
-                size={wide ? 174 : 150}
+                size={wide ? 160 : 140}
                 concerned={Boolean(r && (r.tier >= 2 || r.stopReason))}
               />
             ) : null}
           </View>
-          <View style={{ height: 2, backgroundColor: '#E9CB8A' }} />
-          <View style={[styles.row, { flexWrap: 'wrap', justifyContent: 'space-between' }]}>
+          <View style={{ height: 2, backgroundColor: C.peachEdge }} />
+          <View
+            style={[
+              narrow ? { gap: 14 } : styles.row,
+              { flexWrap: 'wrap', justifyContent: 'space-between' },
+            ]}
+          >
             <Copy
-              style={{
-                fontSize: 11,
-                maxWidth: 360,
-                lineHeight: 17,
-                color: '#655539',
-                fontWeight: '700',
-              }}
+              kind="label"
+              color="#7A5A00"
+              style={{ fontSize: 11, maxWidth: 360, flexShrink: 1 }}
             >
               {t(
                 'PUBLIC HEALTH GUIDANCE · ESTIMATE, NOT A GUARANTEE',
@@ -171,6 +181,7 @@ export function Home({ s }: { s: HeatGuardState }) {
             {s.session ? (
               <View style={styles.wrap}>
                 <Button
+                  style={narrow ? { flexGrow: 1 } : undefined}
                   label={
                     s.session.phase === 'active'
                       ? t('Take a break', 'Tomar un descanso')
@@ -188,6 +199,7 @@ export function Home({ s }: { s: HeatGuardState }) {
               </View>
             ) : r ? (
               <Button
+                style={narrow ? { alignSelf: 'stretch' } : undefined}
                 icon="play"
                 disabled={!r.window}
                 label={t('Start outdoor session', 'Iniciar sesión al aire libre')}
@@ -195,6 +207,7 @@ export function Home({ s }: { s: HeatGuardState }) {
               />
             ) : (
               <Button
+                style={narrow ? { alignSelf: 'stretch' } : undefined}
                 icon="refresh"
                 disabled={s.loading}
                 label={t('Check my conditions', 'Revisar mis condiciones')}
@@ -210,25 +223,25 @@ export function Home({ s }: { s: HeatGuardState }) {
               )}
             </Copy>
           ) : null}
-        </LinearGradient>
+        </View>
         <Card
           style={{
             flex: wide ? 1 : undefined,
-            backgroundColor: '#116B8A',
-            borderColor: '#0C536D',
+            backgroundColor: C.blueDeep,
+            borderColor: C.blueDeep,
             justifyContent: 'space-between',
           }}
         >
           <View style={[styles.row, { justifyContent: 'space-between' }]}>
-            <Copy kind="label" color="#DBF4FF">
+            <Copy kind="label" color="white">
               {t('TODAY’S HEAT OUTLOOK', 'PANORAMA DEL CALOR')}
             </Copy>
-            <Icon name="sun" color={C.lime} />
+            <Icon name="sun" color={C.yellow} />
           </View>
           <View style={{ gap: 8 }}>
             <Copy
               color="white"
-              style={{ fontFamily: rounded, fontWeight: '800', fontSize: 34, lineHeight: 42 }}
+              style={{ fontFamily: rounded, fontWeight: '800', fontSize: 30, lineHeight: 37 }}
             >
               {level
                 ? lang === 'es'
@@ -238,7 +251,7 @@ export function Home({ s }: { s: HeatGuardState }) {
                   ? t(`${fallback.name} concern`, `${fallback.es}: precaución`)
                   : t('Check the outlook', 'Revisa el panorama')}
             </Copy>
-            <Copy color="#DBF4FF" style={{ fontSize: 14, lineHeight: 22 }}>
+            <Copy color="white" style={{ fontSize: 14, lineHeight: 21 }}>
               {level
                 ? t(
                     `NWS HeatRisk ${w!.heatRisk}/4 · daily forecast`,
@@ -261,8 +274,8 @@ export function Home({ s }: { s: HeatGuardState }) {
                 key={i}
                 style={{
                   flex: 1,
-                  height: 13,
-                  borderRadius: 7,
+                  height: 12,
+                  borderRadius: 6,
                   backgroundColor: v.color,
                   opacity: w?.heatRisk === undefined || w.heatRisk === i ? 1 : 0.35,
                 }}
@@ -330,54 +343,65 @@ export function Home({ s }: { s: HeatGuardState }) {
         </Copy>
       </Card>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-        {[
+        {(
           [
-            'sun',
-            t('Air temperature', 'Temperatura'),
-            w ? `${Math.round(toF(w.current.temperatureC))}°F` : '—',
-          ],
-          ['water', t('Humidity', 'Humedad'), w ? `${w.current.humidity}%` : '—'],
-          ['leaf', t('Wind', 'Viento'), w ? `${w.current.windMs.toFixed(1)} m/s` : '—'],
-          [
-            'shield',
-            t('UV / AirNow AQI', 'UV / ICA AirNow'),
-            w ? `${w.current.uv?.toFixed(1) ?? '—'} / ${w.aqi?.value ?? '—'}` : '—',
-          ],
-        ].map(([icon, label, value]) => (
+            [
+              'sun',
+              C.orange,
+              '#FFF0D9',
+              t('Air temperature', 'Temperatura'),
+              w ? `${Math.round(toF(w.current.temperatureC))}°F` : '—',
+            ],
+            [
+              'water',
+              C.blue,
+              C.blueSoft,
+              t('Humidity', 'Humedad'),
+              w ? `${w.current.humidity}%` : '—',
+            ],
+            [
+              'leaf',
+              C.greenDeep,
+              C.lime,
+              t('Wind', 'Viento'),
+              w ? `${w.current.windMs.toFixed(1)} m/s` : '—',
+            ],
+            [
+              'shield',
+              '#9B59D0',
+              '#F3E8FC',
+              t('UV / AirNow AQI', 'UV / ICA AirNow'),
+              w ? `${w.current.uv?.toFixed(1) ?? '—'} / ${w.aqi?.value ?? '—'}` : '—',
+            ],
+          ] as [IconName, string, string, string, string][]
+        ).map(([icon, tint, bg, label, value]) => (
           <Card
             key={label}
-            style={{ flex: 1, minWidth: width < 400 ? 140 : 170, padding: 18, gap: 8 }}
+            style={[
+              styles.row,
+              { flex: 1, minWidth: width < 400 ? 150 : 200, padding: 14, gap: 12 },
+            ]}
           >
-            <View style={[styles.row, { justifyContent: 'space-between' }]}>
-              <Copy style={{ fontSize: 12 }}>{label}</Copy>
-              <Icon name={icon as 'sun'} size={18} color={C.teal} />
+            <IconBadge name={icon} color={tint} bg={bg} size={40} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Copy style={{ fontSize: 12, lineHeight: 16 }}>{label}</Copy>
+              <Copy
+                color={C.ink}
+                style={{ fontFamily: rounded, fontSize: 22, lineHeight: 28, fontWeight: '800' }}
+              >
+                {value}
+              </Copy>
             </View>
-            <Copy
-              color={C.ink}
-              style={{ fontFamily: rounded, fontSize: 28, lineHeight: 35, fontWeight: '800' }}
-            >
-              {value}
-            </Copy>
           </Card>
         ))}
       </View>
       <View style={[wide ? styles.row : { gap: 14 }, { alignItems: wide ? 'stretch' : undefined }]}>
-        <Card style={{ flex: 1, backgroundColor: C.lime, borderColor: '#C8E7A3' }}>
+        <Card style={{ flex: 1, backgroundColor: C.lime, borderColor: C.limeEdge }}>
           <View style={styles.row}>
-            <View
-              style={{
-                padding: 12,
-                backgroundColor: C.paper,
-                borderRadius: 18,
-                borderWidth: 2,
-                borderColor: '#C8E7A3',
-              }}
-            >
-              <Icon name="snow" size={25} />
-            </View>
+            <IconBadge name="snow" color={C.greenDeep} bg={C.paper} size={52} />
             <View style={{ flex: 1, gap: 4 }}>
               <Copy kind="h2">{t('Find your cool place.', 'Encuentra un lugar fresco.')}</Copy>
-              <Copy style={{ fontSize: 13 }}>
+              <Copy color={C.ink} style={{ fontSize: 14, lineHeight: 20 }}>
                 {t(
                   'Water, shade and public spaces with AC.',
                   'Agua, sombra y espacios públicos con aire acondicionado.',
@@ -403,12 +427,10 @@ export function Home({ s }: { s: HeatGuardState }) {
         </Card>
         <Card style={{ flex: 1, backgroundColor: C.blueSoft, borderColor: C.blueEdge }}>
           <View style={styles.row}>
-            <View style={{ padding: 10, borderRadius: 18, backgroundColor: C.paper }}>
-              <Icon name="shirt" size={30} color={C.blue} />
-            </View>
+            <IconBadge name="shirt" color={C.blue} bg={C.paper} size={52} />
             <View style={{ gap: 4, flex: 1 }}>
               <Copy kind="h2">{t('Dress for the day.', 'Vístete para el día.')}</Copy>
-              <Copy style={{ fontSize: 13 }}>
+              <Copy color={C.ink} style={{ fontSize: 14, lineHeight: 20 }}>
                 {t(
                   'A thoughtful outfit. A few useful essentials.',
                   'Ropa adecuada y algunos elementos útiles.',
@@ -424,14 +446,16 @@ export function Home({ s }: { s: HeatGuardState }) {
           />
         </Card>
       </View>
-      <View style={[styles.row, { flexWrap: 'wrap', justifyContent: 'space-between' }]}>
+      <View style={[styles.wrap, { justifyContent: 'space-between' }]}>
         <Button
+          style={narrow ? { flexGrow: 1 } : undefined}
           variant="quiet"
           icon="heart"
           label={t('Know the symptoms', 'Conocer los síntomas')}
           onPress={() => s.setSheet('symptoms')}
         />
         <Button
+          style={narrow ? { flexGrow: 1 } : undefined}
           variant="quiet"
           icon="share"
           disabled={!r}
@@ -439,6 +463,7 @@ export function Home({ s }: { s: HeatGuardState }) {
           onPress={() => run(s.shareCard)}
         />
         <Button
+          style={narrow ? { flexGrow: 1 } : undefined}
           icon="refresh"
           label={s.loading ? t('Checking…', 'Revisando…') : t('Check now', 'Revisar ahora')}
           disabled={s.loading}
@@ -457,7 +482,7 @@ export function Home({ s }: { s: HeatGuardState }) {
         </Copy>
       ) : null}
       {w?.alerts.map((a) => (
-        <Card key={a.id} style={{ backgroundColor: '#FBE8DF' }}>
+        <Card key={a.id} style={{ backgroundColor: C.redSoft, borderColor: C.redEdge }}>
           <Copy kind="h2">{a.event}</Copy>
           <Copy>{a.headline}</Copy>
           <Copy style={{ fontSize: 12 }}>{a.description}</Copy>

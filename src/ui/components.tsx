@@ -28,16 +28,19 @@ export function Copy({
   kind = 'body',
   color,
   style,
+  lines,
 }: {
   children: React.ReactNode;
   kind?: 'body' | 'label' | 'h2' | 'title';
   color?: string;
   style?: StyleProp<TextStyle>;
+  lines?: number;
 }) {
   const { large } = useLocale();
   const resolved = StyleSheet.flatten([styles[kind], style]);
   return (
     <Text
+      numberOfLines={lines}
       accessibilityRole={kind === 'title' || kind === 'h2' ? 'header' : undefined}
       style={[
         styles[kind],
@@ -161,23 +164,12 @@ export function Button({
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
-  const color = variant === 'danger' ? C.red : C.ink;
-  const face =
-    variant === 'primary'
-      ? C.green
-      : variant === 'danger'
-        ? '#FFF0F2'
-        : variant === 'secondary'
-          ? C.blueSoft
-          : C.paper;
-  const edge =
-    variant === 'primary'
-      ? C.greenDeep
-      : variant === 'danger'
-        ? '#E5AFB8'
-        : variant === 'secondary'
-          ? C.blueEdge
-          : C.line;
+  const [color, face, edge] = {
+    primary: ['white', C.greenDeep, C.greenEdge],
+    secondary: [C.blueInk, C.blueSoft, C.blueEdge],
+    quiet: [C.muted, C.paper, C.line],
+    danger: [C.red, C.redSoft, C.redEdge],
+  }[variant];
   return (
     <RaisedPressable
       accessibilityRole="button"
@@ -187,10 +179,10 @@ export function Button({
       onPress={onPress}
       face={face}
       edge={edge}
-      depth={variant === 'quiet' ? 3 : 5}
+      depth={4}
       style={style}
     >
-      {icon ? <Icon name={icon} size={20} color={color} /> : null}
+      {icon ? <Icon name={icon} size={19} color={color} /> : null}
       <Copy
         color={color}
         style={{
@@ -198,6 +190,8 @@ export function Button({
           fontWeight: '800',
           fontSize: 15,
           lineHeight: 21,
+          letterSpacing: 0.6,
+          textTransform: 'uppercase',
           textAlign: 'center',
           flexShrink: 1,
         }}
@@ -216,6 +210,33 @@ export function Card({
 }) {
   return <View style={[styles.card, style]}>{children}</View>;
 }
+/** Rounded tile that frames an icon; decorative, so it stays out of the accessibility tree. */
+export function IconBadge({
+  name,
+  color = C.ink,
+  bg = C.soft,
+  size = 44,
+}: {
+  name: IconName;
+  color?: string;
+  bg?: string;
+  size?: number;
+}) {
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size * 0.3,
+        backgroundColor: bg,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Icon name={name} size={size * 0.55} color={color} />
+    </View>
+  );
+}
 export function Chip({
   label,
   selected,
@@ -233,10 +254,12 @@ export function Chip({
       accessibilityLabel={label}
       accessibilityState={{ selected }}
       onPress={onPress}
-      face={selected ? (color && /^#[0-9a-f]{6}$/i.test(color) ? `${color}18` : C.lime) : C.paper}
-      edge={selected ? (color ?? C.greenDeep) : C.line}
+      face={
+        selected ? (color && /^#[0-9a-f]{6}$/i.test(color) ? `${color}18` : C.blueSoft) : C.paper
+      }
+      edge={selected ? (color ?? C.blueEdge) : C.line}
       depth={3}
-      radius={16}
+      radius={14}
       contentStyle={{
         minHeight: 44,
         paddingHorizontal: 14,
@@ -245,11 +268,17 @@ export function Chip({
       }}
     >
       <View style={{ width: 15, height: 15, opacity: selected ? 1 : 0 }}>
-        <Icon name="check" size={15} color={C.ink} />
+        <Icon name="check" size={15} color={color ?? C.blueInk} />
       </View>
       <Copy
-        color={C.ink}
-        style={{ fontSize: 13, lineHeight: 19, fontWeight: '800', flexShrink: 1 }}
+        color={selected && !color ? C.blueInk : C.ink}
+        style={{
+          fontFamily: rounded,
+          fontSize: 14,
+          lineHeight: 19,
+          fontWeight: '800',
+          flexShrink: 1,
+        }}
       >
         {label}
       </Copy>
@@ -319,7 +348,7 @@ export function Toggle({
           height: 34,
           borderWidth: 2,
           borderBottomWidth: 4,
-          borderColor: value ? C.greenDeep : '#C4D1BC',
+          borderColor: value ? C.greenDeep : '#D2D2D2',
           backgroundColor: value ? C.green : C.line,
           borderRadius: 20,
           padding: 3,
@@ -347,16 +376,16 @@ export function Disclaimer({ place }: { place: Place }) {
   return (
     <View
       style={{
-        backgroundColor: '#F0F7EB',
-        borderRadius: 24,
+        backgroundColor: C.soft,
+        borderRadius: 18,
         borderWidth: 2,
         borderColor: C.line,
         padding: 18,
-        gap: 12,
+        gap: 14,
       }}
     >
       <View style={[styles.row, { alignItems: 'flex-start' }]}>
-        <Icon name="shield" size={20} />
+        <IconBadge name="shield" color={C.red} bg={C.redSoft} size={36} />
         <View style={{ flex: 1, gap: 7 }}>
           <Copy kind="label">{t('YOUR BODY COMES FIRST', 'TU CUERPO ES LO PRIMERO')}</Copy>
           <Copy color={C.ink} style={{ fontSize: 12, lineHeight: 19 }}>

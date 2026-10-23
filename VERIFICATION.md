@@ -2,6 +2,14 @@
 
 Initial scaffold checked on Windows on October 2, 2026 (America/Chicago). The city and district expansions were checked October 20, 2026 as recorded below. This is a scaffold acceptance record, not medical validation or an app-store release certification.
 
+## Flat UI polish and app icon — October 23, 2026
+
+- Neutral white surfaces, flat 2px card outlines, uppercase raised buttons, blue selected chips/tabs, and a single-row phone header. Typography uses `ui-rounded` (SF Pro Rounded on iOS 13+ and Safari; Android and other browsers use their system face) without bundled fonts.
+- The decorative sun was simplified (no blush, gloss, or outline; worried brows in the concerned state). `assets/icon.png`, `adaptive-icon.png`, and `favicon.png` are rendered from the same geometry by `scripts/make-icons.ps1` (Windows only) and wired into `app.json`.
+- Primary buttons use white text on `#46A302` (3.2:1); Duolingo's brighter `#58CC02` is used only for fills. Body grey is `#6F6F6F` (5.0:1 on white).
+- TypeScript passed. All 75 automated tests passed. Expo web, iOS, and Android JavaScript/Hermes exports passed into `work/*-check`; these are not signed binaries.
+- In-app browser inspection at 375×812 and 1280×800 covered Today (empty and loaded), Forecast, Relief Map, Community, My plan, and the location sheet. The header no longer clips the emergency button at phone width. iOS rendering of SF Pro Rounded, the native icon on a home screen, and VoiceOver remain unverified on a physical device.
+
 ## Rounded UI and raised controls — October 22, 2026
 
 - Shared rounded typography, brighter green/blue/yellow surfaces, thicker card outlines, and an original decorative sun illustration now apply across the app.

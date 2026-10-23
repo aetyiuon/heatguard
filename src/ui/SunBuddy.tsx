@@ -1,6 +1,39 @@
 import React from 'react';
-import Svg, { Circle, Ellipse, G, Line, Path } from 'react-native-svg';
+import Svg, { Circle, G, Line, Path, Rect } from 'react-native-svg';
 import { C } from './theme';
+
+// Drawn on a 120×120 grid. scripts/make-icons.ps1 redraws the same shapes for the app icon.
+const RAYS = Array.from({ length: 8 }, (_, i) => (i * Math.PI) / 4);
+function Sun({ concerned }: { concerned: boolean }) {
+  const ink = { stroke: C.ink, strokeWidth: 4.5, strokeLinecap: 'round' as const, fill: 'none' };
+  return (
+    <>
+      <G stroke={C.orange} strokeWidth="9" strokeLinecap="round">
+        {RAYS.map((a) => (
+          <Line
+            key={a}
+            x1={60 + 46 * Math.cos(a)}
+            y1={60 + 46 * Math.sin(a)}
+            x2={60 + 54 * Math.cos(a)}
+            y2={60 + 54 * Math.sin(a)}
+          />
+        ))}
+      </G>
+      <Circle cx="60" cy="64" r="36" fill={C.gold} />
+      <Circle cx="60" cy="60" r="36" fill={C.yellow} />
+      <Rect x="44" y="49" width="9" height="14" rx="4.5" fill={C.ink} />
+      <Rect x="67" y="49" width="9" height="14" rx="4.5" fill={C.ink} />
+      {concerned ? (
+        <>
+          <Path d="M42 45l11-4M78 45l-11-4" {...ink} strokeWidth={4} />
+          <Path d="M52 77q8-5 16 0" {...ink} />
+        </>
+      ) : (
+        <Path d="M51 72q9 8 18 0" {...ink} />
+      )}
+    </>
+  );
+}
 
 /** Decorative HeatGuard sun; never used as a substitute for the written risk level. */
 export function SunBuddy({
@@ -11,49 +44,20 @@ export function SunBuddy({
   concerned?: boolean;
 }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 160 160" aria-hidden>
-      <Ellipse cx="80" cy="145" rx="44" ry="7" fill="#E5BC712B" />
-      <G stroke={C.orange} strokeWidth="10" strokeLinecap="round">
-        <Line x1="80" y1="12" x2="80" y2="23" />
-        <Line x1="80" y1="127" x2="80" y2="138" />
-        <Line x1="17" y1="75" x2="28" y2="75" />
-        <Line x1="132" y1="75" x2="143" y2="75" />
-        <Line x1="35" y1="30" x2="43" y2="38" />
-        <Line x1="117" y1="112" x2="125" y2="120" />
-        <Line x1="35" y1="120" x2="43" y2="112" />
-        <Line x1="117" y1="38" x2="125" y2="30" />
+    <Svg width={size} height={size} viewBox="0 0 120 120" aria-hidden>
+      <Sun concerned={concerned} />
+    </Svg>
+  );
+}
+
+/** App mark: the sun on a green tile, matching the native app icon. */
+export function BrandMark({ size = 40 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 120 120" aria-hidden>
+      <Rect width="120" height="120" rx="28" fill={C.green} />
+      <G transform="translate(15 15) scale(0.75)">
+        <Sun concerned={false} />
       </G>
-      <Circle cx="80" cy="79" r="45" fill={C.orange} />
-      <Circle cx="80" cy="73" r="45" fill={C.yellow} stroke="#E8A522" strokeWidth="3" />
-      <Path
-        d="M48 59c3-10 11-18 22-20"
-        fill="none"
-        stroke="#FFE89A"
-        strokeWidth="7"
-        strokeLinecap="round"
-      />
-      <Ellipse cx="61" cy="70" rx="6" ry="9" fill={C.ink} />
-      <Ellipse cx="99" cy="70" rx="6" ry="9" fill={C.ink} />
-      <Circle cx="63" cy="67" r="2" fill="white" />
-      <Circle cx="101" cy="67" r="2" fill="white" />
-      <Ellipse cx="48" cy="84" rx="9" ry="5" fill="#F78D49" opacity=".65" />
-      <Ellipse cx="112" cy="84" rx="9" ry="5" fill="#F78D49" opacity=".65" />
-      <Path
-        d={concerned ? 'M70 94q10-8 20 0' : 'M67 88q13 18 26 0'}
-        fill="none"
-        stroke={C.ink}
-        strokeWidth="4"
-        strokeLinecap="round"
-      />
-      {concerned ? (
-        <Path
-          d="m56 54 10 4m28 0 10-4"
-          fill="none"
-          stroke={C.ink}
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-      ) : null}
     </Svg>
   );
 }

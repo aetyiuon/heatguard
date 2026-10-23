@@ -100,7 +100,7 @@ export function SymptomsSheet() {
         {t('SAVED IN THE APP · AVAILABLE OFFLINE', 'GUARDADO EN LA APP · SIN CONEXIÓN')}
       </Copy>
       <Copy kind="title">{t('Recognize it. Act early.', 'Reconócelo. Actúa pronto.')}</Copy>
-      <Card style={{ backgroundColor: '#FCE8E4', borderColor: '#EFBAB1' }}>
+      <Card style={{ backgroundColor: C.redSoft, borderColor: C.redEdge }}>
         <View style={styles.row}>
           <Icon name="heart" color={C.red} />
           <Copy kind="h2" color={C.red}>
@@ -366,7 +366,7 @@ export function WardrobeSheet({ s }: { s: HeatGuardState }) {
         </Card>
       ) : (
         <>
-          <Card style={{ backgroundColor: '#F7E9DC' }}>
+          <Card style={{ backgroundColor: C.peach, borderColor: C.peachEdge }}>
             <View style={styles.row}>
               <Icon name="shirt" size={58} color={C.orange} />
               <View style={{ flex: 1, gap: 6 }}>

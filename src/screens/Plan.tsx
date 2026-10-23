@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { HeatGuardState } from '../state/useHeatGuard';
 import { Button, Card, Copy, Icon, useLocale } from '../ui/components';
-import { C, styles } from '../ui/theme';
+import { C, rounded, styles } from '../ui/theme';
 import { HEAT_RISK } from '../domain/sources';
 import { heatIndexF, heatIndexTier, toF } from '../domain/risk';
 export function Plan({ s }: { s: HeatGuardState }) {
@@ -46,41 +46,53 @@ export function Plan({ s }: { s: HeatGuardState }) {
                   style={[
                     styles.row,
                     {
-                      paddingVertical: 13,
-                      borderTopWidth: 1,
+                      paddingVertical: 12,
+                      borderTopWidth: 2,
                       borderColor: C.line,
-                      flexWrap: 'wrap',
                     },
                   ]}
                 >
                   <View
                     style={{
-                      width: 7,
-                      height: 38,
-                      borderRadius: 5,
+                      width: 8,
+                      alignSelf: 'stretch',
+                      borderRadius: 4,
                       backgroundColor: level?.color ?? C.line,
                     }}
                   />
-                  <View style={{ flex: 1, minWidth: 160, gap: 4 }}>
-                    <Copy color={C.ink}>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Copy
+                      color={C.ink}
+                      style={{ fontFamily: rounded, fontWeight: '800', fontSize: 16 }}
+                    >
                       {new Date(d.date + 'T12:00:00Z').toLocaleDateString(
                         lang === 'es' ? 'es-US' : 'en-US',
                         { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' },
                       )}
                     </Copy>
-                    <Copy style={{ fontSize: 12 }}>
+                    <Copy style={{ fontSize: 12, lineHeight: 17 }}>
                       {level
                         ? `NWS HeatRisk ${d.heatRisk}/4 · ${lang === 'es' ? level.es : level.name}`
                         : t('Official HeatRisk unavailable', 'HeatRisk oficial no disponible')}
+                      {` · UV ${d.uv?.toFixed(1) ?? '—'}`}
                     </Copy>
                   </View>
-                  <Copy color={C.ink} style={{ fontSize: 25 }}>
-                    {Math.round(toF(d.highC))}°
-                  </Copy>
-                  <Copy>
-                    {Math.round(toF(d.lowC))}° {t('low', 'mín.')}
-                  </Copy>
-                  <Copy style={{ fontSize: 12 }}>UV {d.uv?.toFixed(1) ?? '—'}</Copy>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Copy
+                      color={C.ink}
+                      style={{
+                        fontFamily: rounded,
+                        fontSize: 24,
+                        lineHeight: 30,
+                        fontWeight: '800',
+                      }}
+                    >
+                      {Math.round(toF(d.highC))}°
+                    </Copy>
+                    <Copy style={{ fontSize: 12, lineHeight: 16 }}>
+                      {Math.round(toF(d.lowC))}° {t('low', 'mín.')}
+                    </Copy>
+                  </View>
                 </View>
               );
             })}
@@ -100,15 +112,14 @@ export function Plan({ s }: { s: HeatGuardState }) {
                   <View
                     key={h.time}
                     style={{
-                      minWidth: 95,
+                      minWidth: 86,
                       flex: 1,
-                      borderRadius: 20,
+                      borderRadius: 16,
                       borderWidth: 2,
-                      borderBottomWidth: 5,
                       borderColor: C.blueEdge,
                       backgroundColor: C.blueSoft,
-                      padding: 15,
-                      gap: 8,
+                      padding: 14,
+                      gap: 6,
                     }}
                   >
                     <Copy style={{ fontSize: 12 }}>
@@ -116,14 +127,22 @@ export function Plan({ s }: { s: HeatGuardState }) {
                         hour: 'numeric',
                       })}
                     </Copy>
-                    <Copy color={C.ink} style={{ fontSize: 23 }}>
+                    <Copy
+                      color={C.ink}
+                      style={{
+                        fontFamily: rounded,
+                        fontSize: 22,
+                        lineHeight: 28,
+                        fontWeight: '800',
+                      }}
+                    >
                       {Math.round(hi)}°F
                     </Copy>
                     <View
                       style={{
                         height: 4,
                         borderRadius: 4,
-                        backgroundColor: [C.teal, '#DBAF21', C.orange, C.red][heatIndexTier(hi)],
+                        backgroundColor: [C.green, C.yellow, C.orange, C.red][heatIndexTier(hi)],
                       }}
                     />
                   </View>

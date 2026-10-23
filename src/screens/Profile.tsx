@@ -56,7 +56,7 @@ export function Profile({ s }: { s: HeatGuardState }) {
     <View style={{ gap: 22 }}>
       <Copy kind="label">{t('PERSONAL, WITHOUT THE PRESSURE', 'PERSONAL, SIN PRESIÓN')}</Copy>
       <Copy kind="title">{t('A plan that considers you.', 'Un plan que te tiene en cuenta.')}</Copy>
-      <Card style={{ backgroundColor: C.lime, borderColor: '#C8E7A3' }}>
+      <Card style={{ backgroundColor: C.lime, borderColor: C.limeEdge }}>
         <Copy kind="h2">
           {t('Your health profile stays with you', 'Tu perfil de salud se queda contigo')}
         </Copy>

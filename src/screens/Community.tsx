@@ -261,10 +261,9 @@ export function Community({ s }: { s: HeatGuardState }) {
       </Card>
       <View
         style={{
-          borderRadius: 26,
+          borderRadius: 18,
           overflow: 'hidden',
           borderWidth: 2,
-          borderBottomWidth: 5,
           borderColor: C.line,
         }}
       >

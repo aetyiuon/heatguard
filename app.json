@@ -5,6 +5,7 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "scheme": "heatguard",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "org.heatguard.app",
@@ -14,8 +15,14 @@
         "BGTaskSchedulerPermittedIdentifiers": ["com.expo.modules.backgroundtask.processing"]
       }
     },
-    "android": { "package": "org.heatguard.app" },
-    "web": { "bundler": "metro", "name": "HeatGuard" },
+    "android": {
+      "package": "org.heatguard.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#58CC02"
+      }
+    },
+    "web": { "bundler": "metro", "name": "HeatGuard", "favicon": "./assets/favicon.png" },
     "plugins": [
       [
         "expo-location",

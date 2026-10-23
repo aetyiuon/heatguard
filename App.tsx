@@ -14,7 +14,7 @@ import {
 } from './src/ui/components';
 import { C, rounded, styles } from './src/ui/theme';
 import { RaisedPressable } from './src/ui/RaisedPressable';
-import { SunBuddy } from './src/ui/SunBuddy';
+import { BrandMark } from './src/ui/SunBuddy';
 import { Home } from './src/screens/Home';
 import { Relief } from './src/screens/Relief';
 import { Plan } from './src/screens/Plan';
@@ -30,20 +30,36 @@ const NAV: { id: Tab; icon: IconName; en: string; es: string }[] = [
 ];
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <View style={[styles.row, { gap: 5 }]}>
-      <SunBuddy size={compact ? 42 : 49} />
+    <View
+      accessible
+      accessibilityRole="header"
+      accessibilityLabel="HeatGuard"
+      style={[styles.row, { gap: 10 }]}
+    >
+      <BrandMark size={compact ? 34 : 40} />
       <Copy
-        color={C.ink}
+        color={C.greenDeep}
         style={{
           fontFamily: rounded,
           fontSize: compact ? 22 : 26,
+          lineHeight: compact ? 28 : 32,
           fontWeight: '900',
-          letterSpacing: -1,
+          letterSpacing: -0.8,
         }}
       >
-        HeatGuard<Copy color={C.greenDeep}>.</Copy>
+        heatguard
       </Copy>
     </View>
+  );
+}
+function CallButton({ number }: { number: string }) {
+  return (
+    <Button
+      variant="danger"
+      icon="phone"
+      label={number}
+      onPress={() => void Linking.openURL(`tel:${number}`)}
+    />
   );
 }
 export default function App() {
@@ -63,97 +79,97 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
   function nav(vertical: boolean) {
     return (
       <View
+        accessibilityRole="tablist"
         style={
           vertical
-            ? { gap: 12 }
+            ? { gap: 6 }
             : {
                 flexDirection: 'row',
                 justifyContent: 'space-around',
-                paddingTop: 10,
-                paddingBottom: 8,
-                paddingHorizontal: 8,
-                gap: 5,
+                paddingTop: 8,
+                paddingBottom: 6,
+                paddingHorizontal: 6,
+                gap: 4,
                 borderTopWidth: 2,
                 borderColor: C.line,
                 backgroundColor: C.paper,
               }
         }
       >
-        {NAV.map((n) => (
-          <RaisedPressable
-            key={n.id}
-            accessibilityRole="tab"
-            accessibilityLabel={t(n.en, n.es)}
-            accessibilityState={{ selected: s.tab === n.id }}
-            onPress={() => s.setTab(n.id)}
-            style={vertical ? undefined : { flex: 1 }}
-            face={s.tab === n.id ? C.blueSoft : C.paper}
-            edge={s.tab === n.id ? C.blueEdge : C.line}
-            rim={s.tab === n.id ? C.blueEdge : C.paper}
-            depth={3}
-            radius={18}
-            contentStyle={
-              vertical
-                ? {
-                    gap: 12,
-                    justifyContent: 'flex-start',
-                    paddingHorizontal: 12,
-                    paddingVertical: 11,
-                    minHeight: 62,
-                  }
-                : {
-                    flexDirection: 'column',
-                    paddingHorizontal: 2,
-                    paddingVertical: 7,
-                    minHeight: 69,
-                    gap: 4,
-                  }
-            }
-          >
-            <View
-              style={{
-                width: vertical ? 34 : 28,
-                height: vertical ? 34 : 28,
-                borderRadius: 11,
-                backgroundColor: s.tab === n.id ? C.paper : C.soft,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+        {NAV.map((n) => {
+          const on = s.tab === n.id;
+          return (
+            <RaisedPressable
+              key={n.id}
+              accessibilityRole="tab"
+              accessibilityLabel={t(n.en, n.es)}
+              accessibilityState={{ selected: on }}
+              onPress={() => s.setTab(n.id)}
+              style={vertical ? undefined : { flex: 1 }}
+              face={on ? C.blueSoft : C.paper}
+              edge={C.paper}
+              rim={on ? C.blueEdge : C.paper}
+              depth={0}
+              radius={14}
+              contentStyle={
+                vertical
+                  ? {
+                      gap: 16,
+                      justifyContent: 'flex-start',
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      minHeight: 52,
+                    }
+                  : {
+                      flexDirection: 'column',
+                      paddingHorizontal: 2,
+                      paddingVertical: 6,
+                      minHeight: 58,
+                      gap: 3,
+                    }
+              }
             >
-              <Icon
-                name={n.icon}
-                size={vertical ? 23 : 22}
-                color={s.tab === n.id ? C.blue : C.teal}
-              />
-            </View>
-            <Copy
-              color={s.tab === n.id ? '#075882' : C.muted}
-              style={{
-                fontSize: vertical ? 15 : 10,
-                fontWeight: '800',
-                lineHeight: vertical ? 22 : 14,
-                flexShrink: 1,
-                textAlign: vertical ? 'left' : 'center',
-              }}
-            >
-              {t(n.en, n.es)}
-            </Copy>
-            {vertical && s.tab === n.id ? (
-              <View
+              <Icon name={n.icon} size={vertical ? 26 : 24} color={on ? C.blue : C.hare} />
+              <Copy
+                color={on ? C.blueInk : C.muted}
                 style={{
-                  marginLeft: 'auto',
-                  width: 8,
-                  height: 8,
-                  borderRadius: 8,
-                  backgroundColor: C.blue,
+                  fontFamily: rounded,
+                  fontSize: vertical ? 15 : 10,
+                  fontWeight: '800',
+                  lineHeight: vertical ? 20 : 13,
+                  letterSpacing: vertical ? 0.6 : 0,
+                  textTransform: vertical ? 'uppercase' : 'none',
+                  flexShrink: 1,
+                  textAlign: vertical ? 'left' : 'center',
                 }}
-              />
-            ) : null}
-          </RaisedPressable>
-        ))}
+              >
+                {t(n.en, n.es)}
+              </Copy>
+            </RaisedPressable>
+          );
+        })}
       </View>
     );
   }
+  const locationButton = (
+    <RaisedPressable
+      accessibilityRole="button"
+      accessibilityLabel={t(`Location: ${s.place.name}`, `Ubicación: ${s.place.name}`)}
+      onPress={() => s.setSheet('location')}
+      style={desktop ? undefined : { flex: 1 }}
+      radius={14}
+      contentStyle={{ gap: 7, paddingHorizontal: 12, justifyContent: 'flex-start' }}
+    >
+      <Icon name="pin" size={18} color={C.blue} />
+      <Copy
+        color={C.ink}
+        lines={1}
+        style={{ fontFamily: rounded, fontSize: 14, fontWeight: '800', flexShrink: 1 }}
+      >
+        {s.place.name}
+      </Copy>
+    </RaisedPressable>
+  );
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar style="dark" />
@@ -161,113 +177,62 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
         {desktop ? (
           <View
             style={{
-              width: 260,
+              width: 256,
               backgroundColor: C.paper,
               borderRightWidth: 2,
               borderColor: C.line,
-              padding: 20,
-              justifyContent: 'space-between',
+              paddingHorizontal: 16,
+              paddingVertical: 24,
+              gap: 32,
             }}
           >
-            <View style={{ gap: 36 }}>
+            <View style={{ paddingHorizontal: 8 }}>
               <Brand />
-              {nav(true)}
             </View>
-            <View style={{ gap: 20 }}>
-              <View
-                style={{
-                  padding: 17,
-                  borderRadius: 22,
-                  borderWidth: 2,
-                  borderBottomWidth: 5,
-                  borderColor: '#C8E7A3',
-                  backgroundColor: C.lime,
-                  gap: 12,
-                }}
-              >
-                <View
-                  style={{
-                    width: 42,
-                    height: 42,
-                    backgroundColor: C.paper,
-                    borderRadius: 15,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Icon name="leaf" color={C.teal} size={26} />
-                </View>
-                <Copy
-                  color={C.ink}
-                  style={{ fontSize: 16, fontFamily: rounded, fontWeight: '800' }}
-                >
-                  {t('Small breaks. Better days.', 'Pequeños descansos. Mejores días.')}
-                </Copy>
-                <Copy style={{ fontSize: 12, lineHeight: 18 }}>
-                  {t(
-                    'A little care before the heat catches up.',
-                    'Un poco de cuidado antes de que el calor te alcance.',
-                  )}
-                </Copy>
-              </View>
-              <Copy kind="label" style={{ fontSize: 9 }}>
-                HEAT AWARENESS, HUMAN FIRST
-              </Copy>
-            </View>
+            {nav(true)}
           </View>
         ) : null}
         <View style={{ flex: 1 }}>
           <View
             style={{
-              paddingHorizontal: desktop ? 36 : 18,
-              paddingVertical: desktop ? 20 : 12,
+              paddingHorizontal: desktop ? 36 : 14,
+              paddingVertical: desktop ? 16 : 10,
               borderBottomWidth: 2,
               borderColor: C.line,
               backgroundColor: C.paper,
-              gap: 10,
+              gap: 8,
             }}
           >
-            <View style={[styles.row, { justifyContent: 'space-between', flexWrap: 'wrap' }]}>
+            <View style={[styles.row, { justifyContent: 'space-between', gap: 8 }]}>
               {desktop ? (
-                <View style={styles.row}>
-                  <Copy kind="label">
-                    {t('YOUR DAILY HEAT PLAN', 'TU PLAN DIARIO CONTRA EL CALOR')}
-                  </Copy>
-                </View>
+                <Copy kind="label">
+                  {t('YOUR DAILY HEAT PLAN', 'TU PLAN DIARIO CONTRA EL CALOR')}
+                </Copy>
               ) : (
-                <Brand compact />
+                <BrandMark size={34} />
               )}
-              <View style={[styles.row, { gap: 4, flexWrap: 'wrap' }]}>
-                <Button
-                  variant="quiet"
-                  icon="pin"
-                  label={s.place.name}
-                  onPress={() => s.setSheet('location')}
-                />
-                <Button
-                  variant="danger"
-                  icon="phone"
-                  label={`${s.place.emergencyNumber}`}
-                  onPress={() => void Linking.openURL(`tel:${s.place.emergencyNumber}`)}
-                />
+              <View style={[styles.row, { gap: 8, flexShrink: 1 }, desktop ? null : { flex: 1 }]}>
+                {locationButton}
+                <CallButton number={s.place.emergencyNumber} />
               </View>
             </View>
             {!desktop ? (
-              <Copy kind="label" style={{ fontSize: 9 }}>
+              <Copy style={{ fontSize: 11, lineHeight: 15, textAlign: 'center' }}>
                 {t(
-                  'ESTIMATE, NOT A GUARANTEE · COOL DOWN EARLY',
-                  'ESTIMACIÓN, SIN GARANTÍA · REFRÉSCATE PRONTO',
+                  'An estimate, not a guarantee. Cool down early.',
+                  'Una estimación, sin garantía. Refréscate pronto.',
                 )}
               </Copy>
             ) : null}
           </View>
           <ScrollView
             key={s.tab}
+            style={{ backgroundColor: C.bg }}
             contentContainerStyle={{
-              padding: desktop ? 36 : 18,
-              paddingTop: desktop ? 30 : 24,
-              gap: 22,
-              maxWidth: 1440,
+              padding: desktop ? 36 : 16,
+              paddingTop: desktop ? 32 : 20,
+              gap: 20,
+              maxWidth: 1200,
               width: '100%',
               alignSelf: 'center',
             }}
@@ -276,9 +241,18 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
             {s.error ? (
               <View
                 accessibilityRole="alert"
-                style={{ padding: 16, borderRadius: 12, backgroundColor: '#FCE8E4', gap: 8 }}
+                style={{
+                  padding: 16,
+                  borderRadius: 16,
+                  borderWidth: 2,
+                  borderColor: C.redEdge,
+                  backgroundColor: C.redSoft,
+                  gap: 10,
+                }}
               >
-                <Copy color={C.red}>{s.error}</Copy>
+                <Copy color={C.red} style={{ fontWeight: '700' }}>
+                  {s.error}
+                </Copy>
                 <Button
                   variant="quiet"
                   label={t('Dismiss', 'Cerrar')}
@@ -298,8 +272,13 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
               <Profile s={s} />
             )}
             {s.tab !== 'home' ? <Disclaimer place={s.place} /> : null}
-            <View style={[styles.row, { justifyContent: 'space-between', flexWrap: 'wrap' }]}>
-              <Copy style={{ fontSize: 11 }}>
+            <View
+              style={[
+                styles.row,
+                { justifyContent: 'space-between', flexWrap: 'wrap', paddingTop: 4 },
+              ]}
+            >
+              <Copy style={{ fontSize: 12 }}>
                 {t('HeatGuard · take care out there.', 'HeatGuard · cuídate ahí fuera.')}
               </Copy>
               <Button
@@ -321,9 +300,9 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
         <View
           style={{
             flex: 1,
-            backgroundColor: '#172C2780',
+            backgroundColor: '#0000007A',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: desktop ? 'center' : 'flex-end',
             padding: desktop ? 30 : 0,
           }}
         >
@@ -331,34 +310,41 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
             style={{
               maxWidth: 760,
               width: '100%',
-              maxHeight: '95%',
+              maxHeight: desktop ? '95%' : '92%',
               backgroundColor: C.bg,
-              borderRadius: 28,
-              borderWidth: 2,
-              borderColor: C.line,
+              borderRadius: 24,
+              borderBottomLeftRadius: desktop ? 24 : 0,
+              borderBottomRightRadius: desktop ? 24 : 0,
               overflow: 'hidden',
             }}
           >
+            {!desktop ? (
+              <View
+                style={{
+                  alignSelf: 'center',
+                  width: 40,
+                  height: 5,
+                  borderRadius: 3,
+                  backgroundColor: C.line,
+                  marginTop: 8,
+                }}
+              />
+            ) : null}
             <View
               style={[
                 styles.row,
                 {
                   justifyContent: 'space-between',
-                  padding: 18,
+                  paddingHorizontal: 18,
+                  paddingVertical: 12,
                   borderBottomWidth: 2,
                   borderColor: C.line,
-                  flexWrap: 'wrap',
                 },
               ]}
             >
-              <Brand compact />
-              <View style={styles.row}>
-                <Button
-                  variant="danger"
-                  icon="phone"
-                  label={s.place.emergencyNumber}
-                  onPress={() => void Linking.openURL(`tel:${s.place.emergencyNumber}`)}
-                />
+              {desktop ? <Brand compact /> : <CallButton number={s.place.emergencyNumber} />}
+              <View style={[styles.row, { gap: 8 }]}>
+                {desktop ? <CallButton number={s.place.emergencyNumber} /> : null}
                 <Button
                   variant="quiet"
                   icon="close"
@@ -368,7 +354,7 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
               </View>
             </View>
             <ScrollView
-              contentContainerStyle={{ padding: 24, gap: 22 }}
+              contentContainerStyle={{ padding: desktop ? 24 : 18, gap: 20 }}
               keyboardShouldPersistTaps="handled"
             >
               {s.error ? <Copy color={C.red}>{s.error}</Copy> : null}
