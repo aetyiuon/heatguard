@@ -1,0 +1,19 @@
+name = "heatguard-proxy"
+main = "backend/worker.ts"
+compatibility_date = "2026-10-02"
+
+[vars]
+ALLOWED_ORIGINS = "http://localhost:8081,http://localhost:8082"
+NWS_USER_AGENT = "HeatGuard/0.1 (replace-with-your-real-support-email)"
+
+# Uncomment after provisioning D1; apply backend/schema.sql.
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "heatguard-community"
+# database_id = "YOUR_DATABASE_ID"
+
+# Optional shared abuse protection; choose a unique namespace_id for your account.
+# [[ratelimits]]
+# name = "RATE_LIMITER"
+# namespace_id = "1001"
+# simple = { limit = 60, period = 60 }

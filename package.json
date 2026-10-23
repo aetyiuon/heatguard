@@ -1,0 +1,52 @@
+{
+  "name": "heatguard",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "web": "expo start --web",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "proxy": "tsx backend/local.ts",
+    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "data:refresh": "tsx scripts/refresh-cities.ts",
+    "data:refresh:district": "tsx scripts/refresh-tx06.ts",
+    "data:district:baseline": "tsx scripts/refresh-tx06.ts --baseline",
+    "data:refresh:tx30": "tsx scripts/refresh-tx30.ts",
+    "data:tx30:baseline": "tsx scripts/refresh-tx30.ts --baseline",
+    "export:web": "expo export --platform web",
+    "deploy:proxy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "57.0.26",
+    "expo-background-task": "~57.0.21",
+    "expo-dev-client": "~57.0.19",
+    "expo-haptics": "~57.0.3",
+    "expo-linear-gradient": "~57.0.2",
+    "expo-linking": "~57.0.11",
+    "expo-location": "~57.0.20",
+    "expo-notifications": "~57.0.21",
+    "expo-secure-store": "~57.0.4",
+    "expo-sms": "~57.0.2",
+    "expo-status-bar": "~57.0.1",
+    "expo-task-manager": "~57.0.21",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-maps": "1.27.2",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "15.15.4",
+    "react-native-web": "~0.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "~19.2.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.21.0",
+    "typescript": "~6.0.3",
+    "wrangler": "^4.0.0"
+  }
+}

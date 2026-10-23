@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "HeatGuard",
+    "slug": "heatguard",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "heatguard",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "org.heatguard.app",
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": ["processing"],
+        "BGTaskSchedulerPermittedIdentifiers": ["com.expo.modules.backgroundtask.processing"]
+      }
+    },
+    "android": { "package": "org.heatguard.app" },
+    "web": { "bundler": "metro", "name": "HeatGuard" },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "HeatGuard uses your location to find local heat conditions and nearby cooling places."
+        }
+      ],
+      "expo-secure-store",
+      "expo-notifications",
+      "expo-background-task"
+    ]
+  }
+}

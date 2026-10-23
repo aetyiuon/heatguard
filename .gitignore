@@ -1,0 +1,16 @@
+node_modules/
+.expo/
+dist/
+work/
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.wrangler/
+*.log
+*.p8
+*.p12
+*.pem
+*.key

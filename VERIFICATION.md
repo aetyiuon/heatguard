@@ -1,0 +1,107 @@
+# Verification record
+
+Initial scaffold checked on Windows on October 2, 2026 (America/Chicago). The city and district expansions were checked October 20, 2026 as recorded below. This is a scaffold acceptance record, not medical validation or an app-store release certification.
+
+## Rounded UI and raised controls — October 22, 2026
+
+- Shared rounded typography, brighter green/blue/yellow surfaces, thicker card outlines, and an original decorative sun illustration now apply across the app.
+- Buttons, filter chips, and navigation use a shared native/web `RaisedPressable`. The face moves into a reserved base while pressed; layout height stays fixed. Selected chips reserve checkmark space. Disabled semantics, keyboard focus indicators, switch state, and locale/large-text controls remain in the shared components.
+- TypeScript passed after the final UI changes. All 69 existing automated tests passed. Final Expo web, Android, and iOS JavaScript/Hermes exports passed into `work/bubbly-final-build`; these are not signed binaries or physical-device acceptance tests.
+- The local page, updated JavaScript bundle, and API health check returned HTTP 200. The served bundle contains the new home title and raised controls.
+- Browser visual inspection remains unavailable under the earlier browser security-policy block. Actual press interactions, narrow-screen appearance, and VoiceOver/device acceptance are not claimed as manually verified.
+
+### Browser map mouse interaction — October 22, 2026
+
+The shared Leaflet web map now explicitly enables `scrollWheelZoom` and `dragging`, so each preview map supports mouse-wheel zoom and drag panning. TypeScript and the Expo web export passed. This web-only configuration change did not add tests that merely repeat the option values. Manual mouse interaction remains unverified under the earlier browser inspection block.
+
+## TX-30 district expansion — October 22, 2026
+
+- Verified the Census layer is **119th Congressional Districts**, with `CDSESSN=119` and `GEOID=4830`. The district is covered by its Dallas and Tarrant county portions. All 19 intersecting incorporated/CDP community portions are searchable, including southern DFW communities and small boundary intersections.
+- Collected official Census, USGS PAD-US, and TPWD records and clipped them with the dated Arlington/Dallas snapshots. Published **531 amenity records** (109 water, 414 shelter/woodland, 8 public cooling candidates), **279 park features**, and **112 trail features**. These are unverified records, not a complete physical inventory or a guarantee of working facilities.
+- All three Overpass endpoints timed out in the attempted full district collection. The failed collector retained the baseline snapshot. Its UI and metadata explicitly report incomplete coverage and 0/2 completed community-data sections. Cached OSM timestamps remain unchanged.
+- **75 tests passed**, including six new tests of TX-30 geography, pin containment/provenance, polygon/line clipping, county membership/counts, incomplete coverage, and API scope validation. Existing TX-06 and city tests still pass. TypeScript passed.
+- Expo web, Android, and iOS JavaScript/Hermes exports passed into `work/tx30-build`. No signed binaries or physical-device acceptance are claimed.
+- Restarted the local API to load the new district route. Actual HTTP requests returned 200 for both TX-30 (531 pins / 19 communities) and TX-06 (104 pins / 89 communities), with the allowed CORS origin. The updated web bundle returned HTTP 200 and includes the District 30 selector.
+- Browser visual inspection remains blocked by the earlier browser security policy. No new manual map interaction or screenshot acceptance is claimed. See [TX30-MAP.md](TX30-MAP.md) for source lineage and coverage limits.
+
+## TX-06 district expansion — October 20, 2026
+
+| Check                    | Result                                                                                                                                                                                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Geography                | Official Census layer name and `CDSESSN=119` checked for `GEOID=4806`. All nine county intersections and 89 incorporated/CDP community portions retained.                                                                                                                       |
+| Source collection        | Census, USGS PAD-US, TPWD park boundaries, designated hiking trails and public shelters retrieved. The Windows TPWD certificate-chain issue was resolved through PowerShell 7's standard validated HTTPS retrieval; certificate and execution-policy settings were not changed. |
+| Current catalog          | 102 clipped park features, 25 clipped trail features, 104 amenity records (24 water, 79 shelter/woodland and one cooling candidate). Amenity coverage is sparse outside DFW.                                                                                                    |
+| Unfinished collection    | All three Overpass providers timed out for district and minimal diagnostic requests. The snapshot is marked `baseline`, with 0/20 completed community-data sections. The UI explicitly shows incomplete coverage and does not equate zero records with absence of amenities.    |
+| Geometry                 | Tests check district holes/islands, crossing trails with original endpoints outside, complete planned query tiling, every delivered pin, clipped park polygons and trail segment midpoints.                                                                                     |
+| API                      | `/relief?district=tx06` returns complete snapshot metadata and rejects invalid/conflicting scopes. Bundled Worker/cache smoke returned HTTP 200 with nine counties, 89 communities and preserved record counts.                                                                 |
+| Checks                   | TypeScript and all **69 automated tests** passed. Expo web, iOS and Android JavaScript/Hermes exports passed. Native exports are not signed binaries.                                                                                                                           |
+| Visual/device acceptance | Browser inspection remains blocked by the earlier browser security policy. District UI and native physical-device acceptance are not claimed.                                                                                                                                   |
+
+See `TX06-MAP.md` for the exact source links, county counts, source ages and remaining data work. The following city checks record the earlier implementation.
+
+### Earlier whole-city checks
+
+| Check              | Result                                                                                                                                                                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TypeScript         | `tsc --noEmit` passed with the complete city datasets.                                                                                                                                                                                                                    |
+| Automated tests    | All 60 tests passed. New city tests verify complete ID batches, rejection of omissions, polygons with holes/islands, southern Arlington assets, city-wide provenance and city API validation/CORS.                                                                        |
+| Data collection    | Snapshots collected October 2 span the full published municipal extents: Arlington 355 amenities / 103 park features / 99 trail segments; Dallas 1,229 amenities / 404 park features / 168 existing trail segments. See `DFW-MAP.md` for source dates and counts by kind. |
+| API responses      | The actual handler serves complete snapshots without coordinates and rejects unsupported city names. A bundled Worker smoke check returned HTTP 200 for both cities and preserved all records through a stubbed Cache API. No live Cloudflare deployment is claimed.      |
+| Production exports | Expo web, Android and iOS exports passed. Hermes required a workspace temporary directory because the host's default temporary path denied bytecode writes. These are JavaScript/Hermes exports, not signed application binaries.                                         |
+| Browser preview    | Expo dev server started at localhost:8081. Browser inspection was blocked by a browser security policy; current city-wide map interaction and visual/mobile acceptance remain unverified.                                                                                 |
+| Local socket check | Shell HTTP requests were denied by the environment's network sandbox. API responses were checked directly through the real handler and bundled Worker instead.                                                                                                            |
+| Source dates       | City snapshots retain their October 2 collection timestamps. The oldest underlying OSM database dates are May 6 for Arlington and June 1 for Dallas; the UI displays this provenance rather than implying live operating status.                                          |
+
+The following table preserves checks from the earlier nearby-map implementation; its browser screenshots do not establish visual acceptance of the whole-city expansion.
+
+## Earlier scaffold checks — October 2, 2026
+
+| Check                         | Result                                                                                                                                                                                                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| TypeScript                    | `pnpm typecheck` passed with TypeScript 6.0.3.                                                                                                                                                                                                         |
+| Automated tests               | All 54 tests passed using the project's tsx/Node test runner.                                                                                                                                                                                          |
+| Expo dependency alignment     | `npx expo install --check` reported dependencies up to date.                                                                                                                                                                                           |
+| Production JavaScript exports | Expo export for web, iOS and Android succeeded. Native exports are Hermes bundles, not signed application binaries.                                                                                                                                    |
+| Worker bundle                 | ES2022 ESM bundling succeeded. A bundled-handler smoke check returned 400 for invalid coordinates with a stubbed Cloudflare Cache API.                                                                                                                 |
+| Actual US weather             | Austin returned real Open-Meteo modeled current values plus NWS forecast/alerts. Today's unavailable NOAA raster remained unavailable; the app used its labeled heat-index fallback.                                                                   |
+| Actual global fallback        | London returned a valid Open-Meteo response outside NWS coverage.                                                                                                                                                                                      |
+| Actual Relief data            | Austin returned 100 OpenStreetMap candidates with source metadata. They remain unverified suggestions.                                                                                                                                                 |
+| DFW update                    | Live River Legacy-area lookup returned 17 Arlington city fountains, 8 pavilion features and 28 public trail features. A later browser lookup also returned OSM shelters/woodland, totaling 51 places. Counts depend on area and provider availability. |
+| DFW regression checks         | Six new tests verify actual park/asset labels, retired/inactive exclusion, approximate pavilion points, public trail types, potable-water tags and shade evidence.                                                                                     |
+| Browser home                  | English home, visible estimate disclaimer, emergency action, source/data age and optional shade/water controls rendered.                                                                                                                               |
+| Phone-size layout             | Reviewed at 390 × 844; single-column cards and five bottom tabs rendered. Temporary viewport override was reset afterward.                                                                                                                             |
+| Session flow                  | Start, countdown, cooling phase, disabled early resume and end were exercised in the browser. A clock mismatch found during review was fixed and covered by a regression test.                                                                         |
+| Relief Map                    | Real map/list, source labels and distance information rendered.                                                                                                                                                                                        |
+| Outfit and symptoms           | Activity selection, checklist interaction and bundled first-aid guide opened successfully on the phone-size layout.                                                                                                                                    |
+| Forecast                      | Seven-day forecast and hourly heat-index view rendered with unavailable HeatRisk explicitly marked.                                                                                                                                                    |
+| Language                      | Spanish navigation was exercised; the review preview was restored to English. English is the default.                                                                                                                                                  |
+| Offline cache                 | Reload restored the last conditions with a cached-copy/data-time label. The first-aid guide is bundled independently of network weather.                                                                                                               |
+
+Tests cover NWS regression/corrections, published NIOSH table examples, stale/future timestamps, no-water and child safeguards, HeatRisk severity, limited personal factors, WBGT input behavior, wardrobe rules, timers, map pin merging, request coalescing, coordinate/CORS validation and community consent/moderation/coarse reports. Community tests execute the actual schema in in-memory SQLite; they do not claim live Cloudflare D1 acceptance.
+
+The ordinary Wrangler dry-run could not complete under this host's filesystem restrictions because its native bundler scans restricted ancestor directories. A workspace-scoped resolver was used for the ESM bundle check. Cloudflare runtime/deployment remains to be verified after provisioning; local API and handler tests passed.
+
+## DFW follow-up checks
+
+The bounded White Rock Lake request returned 39 drinking-water pins and 57 shelter/woodland candidates after the 3 km point-distance filter. Fountain and shade filters, named markers, source details, trail context, the 390 × 844 layout and normal viewport were reviewed. Mobile park choices scroll horizontally and filter controls wrap.
+
+Public Overpass requests were intermittently unavailable during testing, particularly concurrent lookups. Arlington's city layers remained available. A failed provider produces a warning, not invented pins. The Fort Worth test did not establish live amenity coverage during this run. The earlier Austin result above records the initial scaffold check; the DFW update subsequently tightened water/shade evidence and excludes plain parks as shade.
+
+## Physical-device and deployment acceptance still needed
+
+| Area                       | Required check                                                                                                                                                  |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Android and iOS binaries   | Configure signing/EAS, build, install and open on physical devices. Verify keyboard, safe areas, touch targets and OS-specific rendering.                       |
+| Location                   | Grant and deny permission, enter a manual place, verify GPS accuracy and confirm no background location request.                                                |
+| Notifications              | Grant/deny; test each Android vibration channel and user overrides; test iOS Time Sensitive with Focus/Silent settings. Verify tap routing from a cold start.   |
+| Background tasks           | Test screen locked, battery saving, poor signal and force-quit. Confirm the OS may delay or prevent checks; never promise a fixed monitoring interval.          |
+| Sessions                   | Suspend/resume, change system clock, refresh into more dangerous conditions and confirm reminder cancellation when ending a session.                            |
+| Private storage            | Verify device-only SecureStore persistence and deletion; browser health/contact data should disappear on reload.                                                |
+| Native maps                | Configure a restricted Android Maps SDK key and exercise Apple Maps on iOS; verify lists still work without tiles.                                              |
+| AirNow and municipal feeds | Provide real credentials/curated feed, verify timestamps, coverage and official-center flags against the provider.                                              |
+| D1/community               | Provision database/salt, apply schema, test concurrent unique votes, moderation, CORS/rate limiting and retention cleanup in the actual environment.            |
+| Buddy SMS                  | Verify OS composer/cancel/send behavior with consenting contacts. Automatic contact delivery is an extension, not implemented.                                  |
+| Accessibility              | Physical VoiceOver/TalkBack, largest OS text sizes, large-text setting and Spanish content review by a fluent reviewer.                                         |
+| Offline                    | Airplane mode with previously cached places; confirm stale risk windows are suppressed, symptom guide works and basemap availability is accurately represented. |
+
+No phone hardware, private health data, AirNow key, production municipal feed, cloud account or real contact message was used for these checks. Apple Health/Health Connect and numeric climate-normal comparisons remain explicit extension boundaries.
