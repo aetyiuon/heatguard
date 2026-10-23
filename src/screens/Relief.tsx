@@ -496,10 +496,9 @@ export function Relief({ s }: { s: HeatGuardState }) {
       {view === 'map' ? (
         <View
           style={{
-            borderRadius: 26,
+            borderRadius: 18,
             overflow: 'hidden',
             borderWidth: 2,
-            borderBottomWidth: 5,
             borderColor: C.line,
           }}
         >
