@@ -6,6 +6,10 @@ The shared UI uses rounded type, colorful cards, an original sun character, and 
 
 In the browser preview, hover over a map and use the mouse wheel to zoom; click and drag to pan.
 
+## Contributing with Codex or Claude
+
+Read [COLLABORATION.md](COLLABORATION.md) for the branch workflow, reusable task prompt, and handoff template. [AGENTS.md](AGENTS.md) contains the shared project instructions; [CLAUDE.md](CLAUDE.md) imports them for Claude Code. Keep concurrent tasks in separate clones/worktrees and share changes through branches and pull requests.
+
 ## Run locally
 
 For the saved free iPhone testing steps, see [IPHONE-TESTING.md](IPHONE-TESTING.md).
