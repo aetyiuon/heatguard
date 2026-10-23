@@ -27,6 +27,24 @@ async function json(url: string, timeout = 25000): Promise<any> {
   if (d.error || d.remark) throw new Error(d.error?.message || d.remark);
   return d;
 }
+// Enumerate IDs spatially, then retrieve those exact IDs without reapplying the envelope.
+// Some ArcGIS servers return coarse spatial-index hits for IDs but tighter geometry hits
+// for feature batches. Reapplying the envelope can silently omit advertised records.
+export function spatialQueryLoader(
+  bounds: CityDataset['bounds'],
+  loader: (url: string) => Promise<any>,
+) {
+  return (url: string) => {
+    const q = new URL(url);
+    if (!q.searchParams.has('objectIds')) {
+      q.searchParams.set('geometry', bounds.join(','));
+      q.searchParams.set('geometryType', 'esriGeometryEnvelope');
+      q.searchParams.set('inSR', '4326');
+      q.searchParams.set('spatialRel', 'esriSpatialRelIntersects');
+    }
+    return loader(q.toString());
+  };
+}
 export async function allFeatures(
   url: string,
   fields: string,

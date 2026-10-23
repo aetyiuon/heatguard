@@ -1,5 +1,7 @@
 # Arlington and Dallas relief maps
 
+The separate **Entire Dallas County** option extends beyond these city limits, with additional regional paths and Garland shelters. See [DALLAS-COUNTY-MAP.md](DALLAS-COUNTY-MAP.md) for its sources, counts and incomplete amenity coverage.
+
 The Relief Map offers **Entire Arlington** and **Entire Dallas** alongside **Texas District 6** and the new default **Texas District 30** view documented in `TX30-MAP.md`. Each city mode includes published data across the full municipal extent, rather than a small radius around a park. Search parks, trail names, fountain IDs and other mapped places; zoom clusters expand into named markers. City boundaries are purple, park footprints green and mapped trails dashed green. A park footprint does not imply shade.
 
 | City      | Drinking fountains | Shelters / wooded areas | Municipal park features | Existing public trail segments |

@@ -53,6 +53,7 @@ export default function ReliefMap({
             boundarySource: city.boundarySource,
             boundaryLabel: city.boundaryLabel,
             regions: city.regions,
+            areaType: city.areaType,
           }
         : undefined,
       showParks,
@@ -73,7 +74,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'�
 const safeText=t=>{const el=document.createElement('span');el.textContent=t;return el;};
 if(d.picking){document.getElementById('map').style.cursor='crosshair';map.on('click',e=>parent.postMessage({pickedPoint:{latitude:e.latlng.lat,longitude:e.latlng.lng}},'*'));}
 const asBounds=b=>[[b[1],b[0]],[b[3],b[2]]];
-if(d.city){L.geoJSON({type:'MultiPolygon',coordinates:d.city.boundary},{style:{color:'#7958A5',weight:2,fillOpacity:.015,dashArray:'7,5'}}).addTo(map).bindTooltip(safeText(d.city.boundaryLabel||d.city.name+' · city limits'));(d.city.regions||[]).forEach(r=>L.geoJSON({type:'MultiPolygon',coordinates:r.polygons},{style:{color:'#7B8585',weight:1,fillOpacity:0,dashArray:'3,5'}}).addTo(map).bindTooltip(safeText(r.name+' County · district portion')));if(d.showParks)d.city.parks.forEach(p=>L.geoJSON({type:'MultiPolygon',coordinates:p.polygons},{style:{color:'#70906C',weight:1,fillColor:'#8AB07B',fillOpacity:.16}}).addTo(map).bindTooltip(safeText(p.name+' · mapped park; shade unverified')).bindPopup(safeText(p.name+(p.address?' · '+p.address:'')+' · Mapped park boundary; not a shade measurement')));}
+if(d.city){L.geoJSON({type:'MultiPolygon',coordinates:d.city.boundary},{style:{color:'#7958A5',weight:2,fillOpacity:.015,dashArray:'7,5'}}).addTo(map).bindTooltip(safeText(d.city.boundaryLabel||d.city.name+' · city limits'));(d.city.regions||[]).forEach(r=>L.geoJSON({type:'MultiPolygon',coordinates:r.polygons},{style:{color:'#7B8585',weight:1,fillOpacity:0,dashArray:'3,5'}}).addTo(map).bindTooltip(safeText(r.name+(d.city.areaType==='county'?(r.partial?' · county portion':''):' County · district portion'))));if(d.showParks)d.city.parks.forEach(p=>L.geoJSON({type:'MultiPolygon',coordinates:p.polygons},{style:{color:'#70906C',weight:1,fillColor:'#8AB07B',fillOpacity:.16}}).addTo(map).bindTooltip(safeText(p.name+' · mapped park; shade unverified')).bindPopup(safeText(p.name+(p.address?' · '+p.address:'')+' · Mapped park boundary; not a shade measurement')));}
 if(d.focus?.bounds)map.fitBounds(asBounds(d.focus.bounds),{padding:[25,25],maxZoom:16});else if(d.focus)map.setView([d.focus.latitude,d.focus.longitude],16);else if(d.city)map.fitBounds(asBounds(d.city.bounds),{padding:[12,12]});
 if(!d.city)L.circleMarker([d.place.latitude,d.place.longitude],{radius:7,color:'#fff',fillColor:'#223D35',fillOpacity:1}).addTo(map).bindPopup(safeText(d.place.name+' · viewing location'));
 if(d.pickedPoint)L.circleMarker([d.pickedPoint.latitude,d.pickedPoint.longitude],{radius:9,color:'#8B3F20',fillColor:'#FFB561',fillOpacity:1,weight:3}).addTo(map).bindTooltip(safeText('Your suggested location · unverified'));

@@ -260,11 +260,21 @@ export function Relief({ s }: { s: HeatGuardState }) {
         </Copy>
         <Copy style={{ fontSize: 13 }}>
           {t(
-            'Browse District 30, District 6, or either city, then zoom into a county, community, park or trail. Your heat-check location stays the same.',
-            'Explora los distritos 30 o 6, o una ciudad, y acerca un condado, comunidad, parque o sendero. Tu ubicación para el calor no cambia.',
+            'Browse all of Dallas County, District 30, District 6, or either city. Search a community, park or trail. Your heat-check location stays the same.',
+            'Explora todo el condado de Dallas, los distritos 30 o 6, o una ciudad. Busca una comunidad, parque o sendero. Tu ubicación para el calor no cambia.',
           )}
         </Copy>
         <View style={styles.wrap}>
+          <Chip
+            label={t('Entire Dallas County', 'Todo el condado de Dallas')}
+            selected={s.mapScope === 'dallas-county'}
+            onPress={() => {
+              setFocus(undefined);
+              s.setMapScope('dallas-county');
+              setRegionFilter('all');
+              setViewKey((v) => v + 1);
+            }}
+          />
           <Chip
             label={t('Texas District 30', 'Distrito 30 de Texas')}
             selected={s.mapScope === 'tx30'}
@@ -319,15 +329,20 @@ export function Relief({ s }: { s: HeatGuardState }) {
             setListLimit(30);
           }}
           placeholder={
-            s.mapScope === 'tx30'
+            s.mapScope === 'dallas-county'
               ? t(
-                  'Try Dallas, Cedar Hill, Lancaster, Duncanville…',
-                  'Prueba Dallas, Cedar Hill, Lancaster, Duncanville…',
+                  'Try Garland, Irving, Richardson, Mesquite…',
+                  'Prueba Garland, Irving, Richardson, Mesquite…',
                 )
-              : t(
-                  'Try Waxahachie, Corsicana, Palestine, Cherokee…',
-                  'Prueba Waxahachie, Corsicana, Palestine, Cherokee…',
-                )
+              : s.mapScope === 'tx30'
+                ? t(
+                    'Try Dallas, Cedar Hill, Lancaster, Duncanville…',
+                    'Prueba Dallas, Cedar Hill, Lancaster, Duncanville…',
+                  )
+                : t(
+                    'Try Waxahachie, Corsicana, Palestine, Cherokee…',
+                    'Prueba Waxahachie, Corsicana, Palestine, Cherokee…',
+                  )
           }
         />
         {query ? (
@@ -430,7 +445,7 @@ export function Relief({ s }: { s: HeatGuardState }) {
           ))}
         </ScrollView>
       </Card>
-      {city?.areaType === 'congressional-district' ? (
+      {city?.areaType === 'congressional-district' || city?.areaType === 'county' ? (
         <DistrictCoverage
           data={city}
           selected={regionFilter}
@@ -568,9 +583,11 @@ export function Relief({ s }: { s: HeatGuardState }) {
           <Button
             variant="secondary"
             label={
-              city.areaType === 'congressional-district'
-                ? t('Show entire district', 'Mostrar todo el distrito')
-                : t('Show entire city', 'Mostrar toda la ciudad')
+              city.areaType === 'county'
+                ? t('Show entire county', 'Mostrar todo el condado')
+                : city.areaType === 'congressional-district'
+                  ? t('Show entire district', 'Mostrar todo el distrito')
+                  : t('Show entire city', 'Mostrar toda la ciudad')
             }
             onPress={() => {
               setFocus(undefined);
@@ -586,9 +603,11 @@ export function Relief({ s }: { s: HeatGuardState }) {
         <Card>
           <Copy kind="h2">
             {city.name} ·{' '}
-            {city.areaType === 'congressional-district'
-              ? t('district-wide data', 'datos de todo el distrito')
-              : t('whole-city coverage', 'cobertura de toda la ciudad')}
+            {city.areaType === 'county'
+              ? t('county-wide map', 'mapa de todo el condado')
+              : city.areaType === 'congressional-district'
+                ? t('district-wide data', 'datos de todo el distrito')
+                : t('whole-city coverage', 'cobertura de toda la ciudad')}
           </Copy>
           <Copy>
             {city.pins.filter((p) => p.kind === 'water').length}{' '}

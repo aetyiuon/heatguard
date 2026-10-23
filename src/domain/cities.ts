@@ -47,12 +47,14 @@ export function polygonBounds(polygons: PolygonCoordinates): CityDataset['bounds
 // Loaded only when the user opens an area map; no weather location is changed.
 export async function bundledCity(city: MappedAreaId): Promise<CityDataset> {
   const data =
-    city === 'tx30'
-      ? (await import('../data/tx30.json')).default
-      : city === 'tx06'
-        ? (await import('../data/tx06.json')).default
-        : city === 'arlington'
-          ? (await import('../data/arlington.json')).default
-          : (await import('../data/dallas.json')).default;
+    city === 'dallas-county'
+      ? (await import('../data/dallas-county.json')).default
+      : city === 'tx30'
+        ? (await import('../data/tx30.json')).default
+        : city === 'tx06'
+          ? (await import('../data/tx06.json')).default
+          : city === 'arlington'
+            ? (await import('../data/arlington.json')).default
+            : (await import('../data/dallas.json')).default;
   return data as unknown as CityDataset;
 }
