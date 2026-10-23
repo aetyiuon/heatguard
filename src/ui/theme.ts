@@ -1,0 +1,68 @@
+import { Platform, StyleSheet } from 'react-native';
+export const C = {
+  bg: '#F8FBF4',
+  paper: '#FFFFFF',
+  ink: '#243B32',
+  muted: '#5C7065',
+  line: '#DDE7D5',
+  orange: '#FF9F1C',
+  lime: '#E0F5B8',
+  soft: '#F1F7EA',
+  red: '#C33140',
+  teal: '#167B63',
+  green: '#58CC02',
+  greenDeep: '#3D9900',
+  blue: '#1686BE',
+  blueSoft: '#E8F6FF',
+  blueEdge: '#B7DDF0',
+  peach: '#FFF1DA',
+  peachEdge: '#E8C78E',
+  yellow: '#FFC83D',
+};
+export const rounded = Platform.select({
+  web: 'ui-rounded, "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif',
+  ios: 'Arial Rounded MT Bold',
+  default: 'sans-serif',
+});
+export const bodyFont = Platform.select({
+  web: '"Trebuchet MS", system-ui, sans-serif',
+  ios: 'Avenir Next',
+  default: 'sans-serif',
+});
+export const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  card: {
+    backgroundColor: C.paper,
+    borderRadius: 26,
+    padding: 22,
+    borderWidth: 2,
+    borderBottomWidth: 5,
+    borderColor: C.line,
+    gap: 14,
+  },
+  title: { fontSize: 36, lineHeight: 44, fontFamily: rounded, fontWeight: '800', color: C.ink },
+  h2: { fontSize: 23, lineHeight: 30, fontFamily: rounded, fontWeight: '800', color: C.ink },
+  body: { fontSize: 16, lineHeight: 24, fontFamily: bodyFont, fontWeight: '500', color: C.muted },
+  label: {
+    fontSize: 11,
+    lineHeight: 17,
+    fontFamily: bodyFont,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    color: C.muted,
+  },
+  divider: { height: 2, backgroundColor: C.line },
+  input: {
+    backgroundColor: C.paper,
+    borderWidth: 2,
+    borderColor: C.line,
+    borderRadius: 18,
+    padding: 14,
+    fontSize: 16,
+    fontFamily: bodyFont,
+    fontWeight: '600',
+    color: C.ink,
+    minHeight: 54,
+  },
+});
