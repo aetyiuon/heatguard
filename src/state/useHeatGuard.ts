@@ -32,7 +32,8 @@ import {
   setMonitoring,
   MonitorSettings,
 } from '../services/monitoring';
-import { nearestAc, directionsUrl, mergePins } from '../domain/relief';
+import { CoolingSearchResult, findCoolingPlace, directionsUrl, mergePins } from '../domain/relief';
+import { bundledCity } from '../domain/cities';
 import { DFW_PLACES, OTHER_PLACES } from '../domain/places';
 export const PRESETS: Place[] = [...DFW_PLACES, ...OTHER_PLACES];
 export type Tab = 'home' | 'relief' | 'plan' | 'community' | 'profile';
@@ -56,12 +57,18 @@ export function useHeatGuard() {
   const [loading, setLoading] = useState(false),
     [mapLoading, setMapLoading] = useState(false),
     [error, setError] = useState('');
+  const [coolingRoute, setCoolingRoute] = useState<
+    | { status: 'idle' }
+    | { status: 'loading'; place: Place }
+    | (CoolingSearchResult & { place: Place })
+  >({ status: 'idle' });
   const [session, setSession] = useState<OutdoorSession | null>(null),
     [now, setNow] = useState(Date.now());
   const [buddies, setBuddies] = useState<Buddy[]>([]),
     [monitor, setMonitor] = useState<MonitorSettings | null>(null);
   const generation = useRef(0);
   const mapGeneration = useRef(0);
+  const coolingGeneration = useRef(0);
   const active = useRef(true);
   useEffect(() => {
     active.current = true;
@@ -170,6 +177,8 @@ export function useHeatGuard() {
   async function changePlace(p: Place) {
     generation.current++;
     mapGeneration.current++;
+    coolingGeneration.current++;
+    setCoolingRoute({ status: 'idle' });
     setPlace(p);
     setWeather(null);
     setPins([]);
@@ -265,32 +274,33 @@ export function useHeatGuard() {
     [pins, localPins, place.latitude, place.longitude],
   );
   async function savePin(p: ReliefPin) {
+    coolingGeneration.current++;
+    setCoolingRoute({ status: 'idle' });
     const next = [...localPins.filter((x) => x.id !== p.id), p].slice(-100);
     setLocalPins(next);
     await writeLocal('pins', next);
   }
   async function routeAc() {
-    let available = allPins;
-    if (!available.length) {
-      try {
-        const data = await fetchRelief(place);
-        available = data.pins;
-        setPins(data.pins);
-      } catch (e) {
-        setError(String(e));
-        return;
-      }
-    }
-    const pin = nearestAc(available, place);
-    if (pin) await Linking.openURL(directionsUrl(pin));
-    else {
-      setTab('relief');
-      setError(
-        lang === 'es'
-          ? 'No hay un lugar fresco confirmado. Llama al 211 en EE. UU. para consultar opciones locales.'
-          : 'No nearby AC place was found. In the US, call 211 for local cooling resources.',
-      );
-    }
+    const g = ++coolingGeneration.current;
+    setCoolingRoute({ status: 'loading', place });
+    const result = await findCoolingPlace({
+      place,
+      cachedPins: pins,
+      localPins,
+      loadDownloadedPins: async () => {
+        const datasets = await Promise.allSettled(
+          (['arlington', 'dallas-county', 'tx06', 'tx30'] as const).map(bundledCity),
+        );
+        return datasets.flatMap((d) => (d.status === 'fulfilled' ? d.value.pins : []));
+      },
+      loadNearbyPins: async () => (await fetchRelief(place)).pins,
+    });
+    if (active.current && g === coolingGeneration.current) setCoolingRoute({ ...result, place });
+  }
+  async function openCoolingDirections() {
+    if (coolingRoute.status !== 'found') return;
+    // The explicit second tap keeps opening Maps inside the browser's user gesture.
+    await Linking.openURL(directionsUrl(coolingRoute.pin, coolingRoute.place));
   }
   async function startSession() {
     if (!risk?.window) {
@@ -445,6 +455,8 @@ export function useHeatGuard() {
     }
   }
   async function erase() {
+    coolingGeneration.current++;
+    setCoolingRoute({ status: 'idle' });
     await endSession();
     if (monitor?.enabled) await setMonitoring({ ...monitor, enabled: false });
     await clearPrivate('profile');
@@ -481,6 +493,7 @@ export function useHeatGuard() {
     localPins,
     loading,
     mapLoading,
+    coolingRoute,
     error,
     setError,
     session,
@@ -496,6 +509,7 @@ export function useHeatGuard() {
     loadMap,
     savePin,
     routeAc,
+    openCoolingDirections,
     startSession,
     endSession,
     takeBreak,
