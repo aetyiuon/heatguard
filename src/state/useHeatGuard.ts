@@ -9,6 +9,7 @@ import {
   OutdoorSession,
   Place,
   Profile,
+  PersonalCheckIn,
   ReliefPin,
   ReliefTrail,
   MapScope,
@@ -16,6 +17,12 @@ import {
   Workload,
 } from '../domain/types';
 import { evaluateRisk } from '../domain/risk';
+import { validCheckIn } from '../domain/personal';
+import {
+  createWeatherRefresher,
+  WEATHER_FOCUS_REFRESH_MS,
+  WEATHER_REFRESH_MS,
+} from '../domain/weather';
 import { sessionRemainingSeconds } from '../domain/session';
 import { fetchWeather, fetchRelief, api } from '../services/api';
 import {
@@ -35,10 +42,14 @@ import {
 import { CoolingSearchResult, findCoolingPlace, directionsUrl, mergePins } from '../domain/relief';
 import { bundledCity } from '../domain/cities';
 import { DFW_PLACES, OTHER_PLACES } from '../domain/places';
+import { useJourney } from './useJourney';
+import { useBiometrics } from './useBiometrics';
 export const PRESETS: Place[] = [...DFW_PLACES, ...OTHER_PLACES];
-export type Tab = 'home' | 'relief' | 'plan' | 'community' | 'profile';
-export type Sheet = 'location' | 'wardrobe' | 'symptoms' | 'method' | null;
+export type Tab = 'home' | 'relief' | 'journey' | 'plan' | 'community' | 'profile';
+export type Sheet = 'location' | 'wardrobe' | 'symptoms' | 'method' | 'checkin' | null;
 export function useHeatGuard() {
+  const journey = useJourney();
+  const biometrics = useBiometrics();
   const [tab, setTab] = useState<Tab>('home'),
     [sheet, setSheet] = useState<Sheet>(null);
   const [lang, setLang] = useState<Language>('en'),
@@ -46,14 +57,19 @@ export function useHeatGuard() {
   const [place, setPlace] = useState<Place>(PRESETS[0]!);
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE),
     [workload, setWorkload] = useState<Workload>('moderate');
+  const [checkIn, setCheckIn] = useState<PersonalCheckIn | null>(null);
   const [weather, setWeather] = useState<WeatherBundle | null>(null),
     [cached, setCached] = useState(false);
+  const [weatherReady, setWeatherReady] = useState(false);
+  const [weatherFailed, setWeatherFailed] = useState(false);
+  const [lastWeatherCheckAt, setLastWeatherCheckAt] = useState<number | null>(null);
+  const [weatherRequests] = useState(() => createWeatherRefresher(fetchWeather));
   const [pins, setPins] = useState<ReliefPin[]>([]),
     [localPins, setLocalPins] = useState<ReliefPin[]>([]);
   const [mapCached, setMapCached] = useState(false),
     [mapWarnings, setMapWarnings] = useState<string[]>([]);
   const [mapTrails, setMapTrails] = useState<ReliefTrail[]>([]);
-  const [mapScope, setMapScope] = useState<MapScope>('tx30');
+  const [mapScope, setMapScope] = useState<MapScope>('arlington');
   const [loading, setLoading] = useState(false),
     [mapLoading, setMapLoading] = useState(false),
     [error, setError] = useState('');
@@ -72,24 +88,37 @@ export function useHeatGuard() {
   const active = useRef(true);
   useEffect(() => {
     active.current = true;
+    const restoreGeneration = generation.current;
     void (async () => {
-      const [savedPlace, savedLang, savedLarge, p, savedWork, local, savedSession, m, ids] =
-        await Promise.all([
-          readLocal('place', PRESETS[0]!),
-          readLocal<Language>('lang', 'en'),
-          readLocal('large', false),
-          readPrivate('profile', DEFAULT_PROFILE),
-          readLocal<Workload>('workload', 'moderate'),
-          readLocal<ReliefPin[]>('pins', []),
-          readLocal<OutdoorSession | null>('session', null),
-          readLocal<MonitorSettings | null>('monitor', null),
-          readPrivate<string[]>('buddy-index', []),
-        ]);
+      const [
+        savedPlace,
+        savedLang,
+        savedLarge,
+        p,
+        savedWork,
+        local,
+        savedSession,
+        m,
+        ids,
+        savedCheckIn,
+      ] = await Promise.all([
+        readLocal('place', PRESETS[0]!),
+        readLocal<Language>('lang', 'en'),
+        readLocal('large', false),
+        readPrivate('profile', DEFAULT_PROFILE),
+        readLocal<Workload>('workload', 'moderate'),
+        readLocal<ReliefPin[]>('pins', []),
+        readLocal<OutdoorSession | null>('session', null),
+        readLocal<MonitorSettings | null>('monitor', null),
+        readPrivate<string[]>('buddy-index', []),
+        readPrivate<PersonalCheckIn | null>('check-in', null),
+      ]);
       if (!active.current) return;
-      setPlace(savedPlace);
+      if (restoreGeneration === generation.current) setPlace(savedPlace);
       setLang(savedLang);
       setLarge(savedLarge);
       setProfile(p);
+      setCheckIn(savedCheckIn);
       setWorkload(savedWork);
       setLocalPins(local);
       setSession(savedSession);
@@ -102,13 +131,18 @@ export function useHeatGuard() {
         `weather.${savedPlace.latitude.toFixed(3)}.${savedPlace.longitude.toFixed(3)}`,
         null,
       );
-      if (active.current && old) {
+      if (active.current && old && restoreGeneration === generation.current) {
         setWeather(old);
         setCached(true);
       }
-    })().catch((e) => setError(String(e)));
+    })()
+      .catch((e) => setError(String(e)))
+      .finally(() => {
+        if (active.current) setWeatherReady(true);
+      });
     return () => {
       active.current = false;
+      weatherRequests.invalidate();
     };
   }, []);
   useEffect(() => {
@@ -145,42 +179,73 @@ export function useHeatGuard() {
     };
   }, [place.latitude, place.longitude]);
   const risk = useMemo(
-    () => (weather ? evaluateRisk(weather, profile, workload, now) : null),
-    [weather, profile, workload, Math.floor(now / 60000)],
+    () => (weather ? evaluateRisk(weather, profile, workload, now, checkIn) : null),
+    [weather, profile, workload, now, checkIn],
   );
   useEffect(() => {
-    if (!session) return;
-    const id = setInterval(
-      () => {
-        if (AppState.currentState === 'active') void refresh();
-      },
-      (risk?.reassessMinutes ?? 15) * 60000,
-    );
-    return () => clearInterval(id);
-  }, [session?.id, place.latitude, place.longitude, risk?.reassessMinutes]);
-  async function refresh(p = place) {
-    const g = ++generation.current;
-    setLoading(true);
-    setError('');
-    try {
-      const result = await fetchWeather(p);
-      if (g === generation.current) {
-        setWeather(result.data);
-        setCached(result.cached);
+    if (!weatherReady) return;
+    const foreground = () =>
+      Platform.OS === 'web'
+        ? typeof document !== 'undefined' && document.visibilityState !== 'hidden'
+        : AppState.currentState === 'active';
+    const onReturn = () => {
+      if (foreground()) {
+        setNow(Date.now());
+        void refresh(place, WEATHER_FOCUS_REFRESH_MS);
       }
-    } catch (e) {
-      if (g === generation.current) setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      if (g === generation.current) setLoading(false);
+    };
+    if (foreground()) void refresh(place);
+    const timer = setInterval(() => {
+      if (foreground()) void refresh(place, WEATHER_REFRESH_MS);
+    }, 15_000);
+    const listener = AppState.addEventListener('change', (state) => {
+      if (state === 'active') onReturn();
+    });
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.addEventListener('focus', onReturn);
+      document.addEventListener('visibilitychange', onReturn);
     }
+    return () => {
+      clearInterval(timer);
+      listener.remove();
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.removeEventListener('focus', onReturn);
+        document.removeEventListener('visibilitychange', onReturn);
+      }
+    };
+  }, [weatherReady, place.latitude, place.longitude, place.name]);
+  function refresh(p = place, minimumInterval = 0) {
+    return weatherRequests.refresh(
+      p,
+      {
+        start: () => {
+          generation.current++;
+          setLoading(true);
+        },
+        success: (result) => {
+          setWeather(result.data);
+          setCached(result.cached);
+          setWeatherFailed(result.cached);
+          if (!result.cached) setLastWeatherCheckAt(Date.now());
+          setNow(Date.now());
+        },
+        failure: () => setWeatherFailed(true),
+        finish: () => setLoading(false),
+      },
+      minimumInterval,
+    );
   }
   async function changePlace(p: Place) {
     generation.current++;
+    weatherRequests.invalidate();
     mapGeneration.current++;
     coolingGeneration.current++;
     setCoolingRoute({ status: 'idle' });
     setPlace(p);
     setWeather(null);
+    setCached(false);
+    setWeatherFailed(false);
+    setLastWeatherCheckAt(null);
     setPins([]);
     setMapTrails([]);
     setMapWarnings([]);
@@ -230,6 +295,19 @@ export function useHeatGuard() {
   async function saveProfile(p: Profile) {
     await writePrivate('profile', p);
     setProfile(p);
+  }
+  async function saveCheckIn(next: PersonalCheckIn) {
+    const timestamp = Date.now();
+    if (!validCheckIn(next, timestamp))
+      throw new Error('Check the personal readings and timestamps.');
+    await writePrivate('check-in', next);
+    setCheckIn(next);
+    setNow(timestamp);
+  }
+  async function clearCheckIn() {
+    await clearPrivate('check-in');
+    setCheckIn(null);
+    setNow(Date.now());
   }
   async function chooseWork(w: Workload) {
     setWorkload(w);
@@ -455,15 +533,25 @@ export function useHeatGuard() {
     }
   }
   async function erase() {
+    journey.clear();
+    journey.setRoute({ name: 'My route', kind: 'sketch', paths: [[]] });
+    biometrics.disconnect();
+    generation.current++;
+    weatherRequests.invalidate();
+    setLoading(false);
+    setWeatherFailed(false);
+    setLastWeatherCheckAt(null);
     coolingGeneration.current++;
     setCoolingRoute({ status: 'idle' });
     await endSession();
     if (monitor?.enabled) await setMonitoring({ ...monitor, enabled: false });
     await clearPrivate('profile');
+    await clearPrivate('check-in');
     for (const b of buddies) await clearPrivate(`buddy-${b.id}`);
     await clearPrivate('buddy-index');
     await clearLocal();
     setProfile(DEFAULT_PROFILE);
+    setCheckIn(null);
     setBuddies([]);
     setLocalPins([]);
     setWeather(null);
@@ -472,6 +560,8 @@ export function useHeatGuard() {
     setMonitor(null);
   }
   return {
+    journey,
+    biometrics,
     tab,
     setTab,
     sheet,
@@ -480,9 +570,12 @@ export function useHeatGuard() {
     large,
     place,
     profile,
+    checkIn,
     workload,
     weather,
     cached,
+    weatherFailed,
+    lastWeatherCheckAt,
     risk,
     pins: allPins,
     mapCached,
@@ -505,6 +598,8 @@ export function useHeatGuard() {
     changePlace,
     useGps,
     saveProfile,
+    saveCheckIn,
+    clearCheckIn,
     chooseWork,
     loadMap,
     savePin,
