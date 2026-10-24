@@ -2,6 +2,13 @@
 
 Initial scaffold checked on Windows on October 2, 2026 (America/Chicago). The city and district expansions were checked October 20, 2026 as recorded below. This is a scaffold acceptance record, not medical validation or an app-store release certification.
 
+## Nearest AC route feedback — October 23, 2026
+
+- The Today button now shows a loading state, uses available downloaded/saved cooling candidates before a live lookup, and keeps explicit no-result/unavailable feedback beside the action. Existing water/shade pins no longer prevent a needed cooling lookup. Searches are limited to 10 km from the selected heat-check location; local unavailable/moderation reports override other copies of a place.
+- A found destination is shown by name with straight-line distance and an explicit unverified hours/access/AC notice. A separate **Open Google Maps directions** tap opens a walking route with the selected heat-check origin, preserving the browser's user gesture. Changing location or editing a local pin invalidates the previous result; pending results cannot overwrite a newer search/location.
+- TypeScript passed and **91 tests passed**, including eight new cooling-search/directions regressions. Expo web, iOS, and Android JavaScript/Hermes exports passed into `work/cooling-route-check`. The first combined export hit a sandbox temporary-file write restriction; rerunning with its temporary directory inside the workspace completed successfully. These exports are not signed native builds or physical-device acceptance.
+- Live browser validation showed progress and then **Northeast Branch Library · Public library**, about **3.8 km straight-line** from the River Legacy preset. The explicit directions tap opened a new Google Maps tab with destination `32.7745195,-97.0795868` and origin `32.7902,-97.116`. This verifies route-link handoff, not route safety, current facility access, or the library's operating status. Native Maps handoff and physical-device behavior remain unverified.
+
 ## Flat UI polish and app icon — October 23, 2026
 
 - Neutral white surfaces, flat 2px card outlines, uppercase raised buttons, blue selected chips/tabs, and a single-row phone header. Typography uses `ui-rounded` (SF Pro Rounded on iOS 13+ and Safari; Android and other browsers use their system face) without bundled fonts.

@@ -6,6 +6,10 @@ The shared UI uses rounded type, colorful cards, an original sun character, and 
 
 In the browser preview, hover over a map and use the mouse wheel to zoom; click and drag to pan.
 
+## Nearest AC directions
+
+On Today, **Route to nearest AC** searches available downloaded/saved records within 10 km of the selected heat-check location, then tries the nearby API if no usable cooling candidate is found. It shows progress and an explicit unavailable/no-result message. A result displays the closest mapped candidate and straight-line distance; it is not a complete inventory or confirmation of opening hours, public access, or working AC. Review the destination, then tap **Open Google Maps directions** for a walking route from the selected heat-check location. This separate tap also avoids opening Maps after an asynchronous lookup, which browsers may block. Changing the heat-check location clears the previous result.
+
 ## Contributing with Codex or Claude
 
 Read [COLLABORATION.md](COLLABORATION.md) for the branch workflow, reusable task prompt, and handoff template. [AGENTS.md](AGENTS.md) contains the shared project instructions; [CLAUDE.md](CLAUDE.md) imports them for Claude Code. Keep concurrent tasks in separate clones/worktrees and share changes through branches and pull requests.
