@@ -411,8 +411,13 @@ export function Home({ s }: { s: HeatGuardState }) {
           </View>
           <View style={styles.wrap}>
             <Button
-              label={t('Route to nearest AC', 'Ir al aire acondicionado')}
+              label={
+                s.coolingRoute.status === 'loading'
+                  ? t('Finding cooling places…', 'Buscando lugares frescos…')
+                  : t('Route to nearest AC', 'Ir al aire acondicionado')
+              }
               icon="arrow"
+              disabled={s.coolingRoute.status === 'loading'}
               onPress={() => run(s.routeAc)}
             />
             <Button
@@ -423,6 +428,54 @@ export function Home({ s }: { s: HeatGuardState }) {
                 void s.loadMap();
               }}
             />
+          </View>
+          <View accessibilityLiveRegion="polite" style={{ gap: 10 }}>
+            {s.coolingRoute.status === 'found' ? (
+              <>
+                <Copy kind="label">
+                  {t('CLOSEST MAPPED COOLING CANDIDATE', 'OPCIÓN FRESCA MÁS CERCANA EN EL MAPA')}
+                </Copy>
+                <Copy kind="h2">{s.coolingRoute.pin.name}</Copy>
+                <Copy>
+                  {t(
+                    `About ${(s.coolingRoute.pin.distance / 1000).toFixed(1)} km in a straight line from ${s.coolingRoute.place.name}. The walking route may be longer.`,
+                    `A unos ${(s.coolingRoute.pin.distance / 1000).toFixed(1)} km en línea recta de ${s.coolingRoute.place.name}. La ruta a pie puede ser más larga.`,
+                  )}
+                </Copy>
+                <Copy>
+                  {t(
+                    'Opening hours, public access and working AC are not confirmed. Check before leaving; this is not a verified open cooling center.',
+                    'No se han confirmado el horario, el acceso público ni el aire acondicionado. Revisa antes de salir; no es un centro de enfriamiento abierto verificado.',
+                  )}
+                </Copy>
+                <Button
+                  label={t('Open Google Maps directions', 'Abrir indicaciones en Google Maps')}
+                  icon="arrow"
+                  onPress={() => run(s.openCoolingDirections)}
+                />
+              </>
+            ) : s.coolingRoute.status === 'loading' ? (
+              <Copy>
+                {t(
+                  `Looking near ${s.coolingRoute.place.name}…`,
+                  `Buscando cerca de ${s.coolingRoute.place.name}…`,
+                )}
+              </Copy>
+            ) : s.coolingRoute.status === 'not-found' || s.coolingRoute.status === 'unavailable' ? (
+              <Copy>
+                {t(
+                  `${s.coolingRoute.status === 'unavailable' ? 'The live lookup is unavailable. ' : ''}No cooling destination was found in available records within 10 km of ${s.coolingRoute.place.name}. Coverage is incomplete. Try again or open the Relief Map for other options.`,
+                  `${s.coolingRoute.status === 'unavailable' ? 'La búsqueda en línea no está disponible. ' : ''}No se encontró un destino fresco en los registros disponibles a menos de 10 km de ${s.coolingRoute.place.name}. La cobertura está incompleta. Vuelve a intentar o abre el mapa para ver otras opciones.`,
+                )}
+              </Copy>
+            ) : (
+              <Copy style={{ fontSize: 13 }}>
+                {t(
+                  'Find a mapped indoor cooling candidate within 10 km of your heat-check location, then review it before opening directions.',
+                  'Busca una opción interior fresca a menos de 10 km de tu ubicación seleccionada y revísala antes de abrir las indicaciones.',
+                )}
+              </Copy>
+            )}
           </View>
         </Card>
         <Card style={{ flex: 1, backgroundColor: C.blueSoft, borderColor: C.blueEdge }}>
