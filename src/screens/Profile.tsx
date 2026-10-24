@@ -4,6 +4,8 @@ import { HeatGuardState } from '../state/useHeatGuard';
 import { Button, Card, Chip, Copy, Field, Toggle, useLocale } from '../ui/components';
 import { C, styles } from '../ui/theme';
 import { Profile as HealthProfile } from '../domain/types';
+import { PersonalSummary } from './PersonalCheckIn';
+import { WearableCard } from '../ui/WearableCard';
 const CONDITIONS = [
   ['cardiovascular', 'Cardiovascular disease', 'Enfermedad cardiovascular'],
   ['diabetes', 'Diabetes', 'Diabetes'],
@@ -56,6 +58,7 @@ export function Profile({ s }: { s: HeatGuardState }) {
     <View style={{ gap: 22 }}>
       <Copy kind="label">{t('PERSONAL, WITHOUT THE PRESSURE', 'PERSONAL, SIN PRESIÓN')}</Copy>
       <Copy kind="title">{t('A plan that considers you.', 'Un plan que te tiene en cuenta.')}</Copy>
+      <PersonalSummary s={s} />
       <Card style={{ backgroundColor: C.lime, borderColor: C.limeEdge }}>
         <Copy kind="h2">
           {t('Your health profile stays with you', 'Tu perfil de salud se queda contigo')}
@@ -125,8 +128,8 @@ export function Profile({ s }: { s: HeatGuardState }) {
             </View>
             <Copy style={{ fontSize: 12 }}>
               {t(
-                'Sex is not used to change the estimate: a supported individual correction is not available. BMI is only a caution flag, never a time multiplier.',
-                'El sexo no cambia la estimación: no hay una corrección individual validada. El IMC solo indica precaución; no multiplica minutos.',
+                'Age, height and weight add context. Adult BMI is only a caution flag when age is known; it never multiplies minutes. Sex is not used to change the estimate. We cannot calculate your individual metabolic rate or heat tolerance from body size.',
+                'Edad, altura y peso aportan contexto. El IMC adulto solo indica precaución cuando se conoce la edad; nunca multiplica minutos. El sexo no cambia la estimación. El tamaño corporal no calcula metabolismo ni tolerancia individual al calor.',
               )}
             </Copy>
           </Card>
@@ -200,6 +203,12 @@ export function Profile({ s }: { s: HeatGuardState }) {
               )}
             </Copy>
             <Copy kind="label">{t('HYDRATION · SELF-REPORT', 'HIDRATACIÓN · AUTOEVALUACIÓN')}</Copy>
+            <Copy style={{ fontSize: 12 }}>
+              {t(
+                'This saved answer is a fallback. A current check-in replaces it; update the check-in before each outing rather than treating yesterday’s hydration as current.',
+                'Esta respuesta guardada es de respaldo. Una revisión actual la reemplaza; actualízala antes de cada salida y no trates la hidratación de ayer como actual.',
+              )}
+            </Copy>
             <View style={styles.wrap}>
               {[
                 ['adequate', 'Feeling hydrated', 'Bien hidratado'],
@@ -298,15 +307,7 @@ export function Profile({ s }: { s: HeatGuardState }) {
           onPress={() => s.setSheet('location')}
         />
       </Card>
-      <Card>
-        <Copy kind="h2">{t('Health connections', 'Conexiones de salud')}</Copy>
-        <Copy>
-          {t(
-            'Apple Health and Android Health Connect are extension points in this scaffold. They are not connected and no heart-rate readings or anomaly predictions are shown. Native adapters need permissions, entitlements and device testing.',
-            'Apple Health y Health Connect están preparados como extensiones, sin conexión ni datos de pulso. Los adaptadores nativos requieren permisos y pruebas en dispositivos.',
-          )}
-        </Copy>
-      </Card>
+      <WearableCard s={s} />
       <Card>
         <Copy kind="h2">{t('You control your data', 'Tú controlas tus datos')}</Copy>
         <Copy>

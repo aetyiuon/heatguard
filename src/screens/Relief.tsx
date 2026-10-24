@@ -16,6 +16,7 @@ import {
 import { communityWrite } from '../services/api';
 import { DFW_PLACES } from '../domain/places';
 import { bundledCity, insidePolygons, polygonBounds } from '../domain/cities';
+import { lineClipper } from '../domain/paths';
 import { MapProps } from '../ui/maps.types';
 import { DistrictCoverage } from '../ui/DistrictCoverage';
 export function Relief({ s }: { s: HeatGuardState }) {
@@ -102,7 +103,10 @@ export function Relief({ s }: { s: HeatGuardState }) {
   const trails = useMemo(() => {
     const all = city?.trails ?? (s.mapScope === 'nearby' ? s.mapTrails : []);
     return activeRegion
-      ? all.filter((t) => t.regionName?.split(', ').includes(activeRegion.name))
+      ? all.flatMap((t) => {
+          const paths = lineClipper(activeRegion.polygons)(t.paths);
+          return paths.length ? [{ ...t, paths }] : [];
+        })
       : all;
   }, [city, s.mapScope, s.mapTrails, activeRegion]);
   const mapPlace = useMemo(
@@ -122,7 +126,10 @@ export function Relief({ s }: { s: HeatGuardState }) {
       query
         ? (city?.parks ?? []).filter(
             (p) =>
-              (!activeRegion || p.regionName?.split(', ').includes(activeRegion.name)) &&
+              (!activeRegion ||
+                p.polygons.some((poly) =>
+                  poly[0]?.some(([x, y]) => insidePolygons(x, y, activeRegion.polygons)),
+                )) &&
               `${p.name} ${p.address ?? ''} ${p.regionName ?? ''} ${p.localityName ?? ''}`
                 .toLowerCase()
                 .includes(query),
@@ -255,71 +262,94 @@ export function Relief({ s }: { s: HeatGuardState }) {
         </Copy>
       </View>
       <Card style={{ backgroundColor: C.soft }}>
-        <Copy kind="label">
-          {t('EXPLORE TEXAS DISTRICTS & DFW', 'EXPLORA LOS DISTRITOS DE TEXAS Y DFW')}
-        </Copy>
-        <Copy style={{ fontSize: 13 }}>
+        <Copy kind="label">{t('EXPLORE BY CITY', 'EXPLORA POR CIUDAD')}</Copy>
+        <Copy>
           {t(
-            'Browse all of Dallas County, District 30, District 6, or either city. Search a community, park or trail. Your heat-check location stays the same.',
-            'Explora todo el condado de Dallas, los distritos 30 o 6, o una ciudad. Busca una comunidad, parque o sendero. Tu ubicación para el calor no cambia.',
+            'Open a full city map, then optionally narrow it to a congressional-district portion. All mapped entries combines every available source area. Your heat-check location stays the same.',
+            'Abre una ciudad completa y, si quieres, filtra su parte de un distrito. Todas las entradas combina las áreas disponibles. Tu ubicación para el calor no cambia.',
           )}
         </Copy>
         <View style={styles.wrap}>
-          <Chip
-            label={t('Entire Dallas County', 'Todo el condado de Dallas')}
-            selected={s.mapScope === 'dallas-county'}
-            onPress={() => {
-              setFocus(undefined);
-              s.setMapScope('dallas-county');
-              setRegionFilter('all');
-              setViewKey((v) => v + 1);
-            }}
-          />
-          <Chip
-            label={t('Texas District 30', 'Distrito 30 de Texas')}
-            selected={s.mapScope === 'tx30'}
-            onPress={() => {
-              setFocus(undefined);
-              s.setMapScope('tx30');
-              setRegionFilter('all');
-              setViewKey((v) => v + 1);
-            }}
-          />
-          <Chip
-            label={t('Texas District 6', 'Distrito 6 de Texas')}
-            selected={s.mapScope === 'tx06'}
-            onPress={() => {
-              setFocus(undefined);
-              s.setMapScope('tx06');
-              setRegionFilter('all');
-              setViewKey((v) => v + 1);
-            }}
-          />
-          <Chip
-            label={t('Entire Arlington', 'Todo Arlington')}
-            selected={s.mapScope === 'arlington'}
-            onPress={() => {
-              setFocus(undefined);
-              s.setMapScope('arlington');
-            }}
-          />
-          <Chip
-            label={t('Entire Dallas', 'Todo Dallas')}
-            selected={s.mapScope === 'dallas'}
-            onPress={() => {
-              setFocus(undefined);
-              s.setMapScope('dallas');
-            }}
-          />
-          <Chip
-            label={t('Near my selected location', 'Cerca de mi ubicación')}
-            selected={s.mapScope === 'nearby'}
-            onPress={() => {
-              setFocus(undefined);
-              s.setMapScope('nearby');
-            }}
-          />
+          {(
+            [
+              ['all-dfw', t('All mapped entries', 'Todas las entradas')],
+              ['dallas', 'Dallas'],
+              ['fort-worth', 'Fort Worth'],
+              ['arlington', 'Arlington'],
+              ['dallas-county', t('Dallas County', 'Condado de Dallas')],
+              ['nearby', t('Nearby', 'Cerca')],
+            ] as const
+          ).map(([scope, label]) => (
+            <Chip
+              key={scope}
+              label={label}
+              selected={s.mapScope === scope}
+              onPress={() => {
+                s.setMapScope(scope);
+                setFocus(undefined);
+                setRegionFilter('all');
+                setViewKey((v) => v + 1);
+              }}
+            />
+          ))}
         </View>
+        {city?.areaType === 'city' ? (
+          <>
+            <Copy kind="label">{t('CITY COVERAGE', 'COBERTURA DE LA CIUDAD')}</Copy>
+            <View style={styles.wrap}>
+              <Chip
+                label={t('Full city map', 'Toda la ciudad')}
+                selected={regionFilter === 'all'}
+                onPress={() => {
+                  setRegionFilter('all');
+                  setFocus(undefined);
+                  setViewKey((v) => v + 1);
+                }}
+              />
+              {city.regions?.map((r) => (
+                <Chip
+                  key={r.id}
+                  label={
+                    r.id === 'tx06'
+                      ? t('District 6 portion', 'Parte del distrito 6')
+                      : t('District 30 portion', 'Parte del distrito 30')
+                  }
+                  selected={regionFilter === r.id}
+                  onPress={() => {
+                    setRegionFilter(r.id);
+                    explore({
+                      name: r.name,
+                      latitude: (r.bounds[1] + r.bounds[3]) / 2,
+                      longitude: (r.bounds[0] + r.bounds[2]) / 2,
+                      bounds: r.bounds,
+                    });
+                  }}
+                />
+              ))}
+            </View>
+            <Copy style={{ fontSize: 12 }}>
+              {t(
+                'District portions use the 119th Congress (2025–2027) boundaries. Park outlines remain city context; pins and trails are filtered to the selected portion.',
+                'Las partes usan límites del Congreso 119 (2025–2027). Los parques dan contexto; los puntos y senderos se filtran a la parte elegida.',
+              )}
+            </Copy>
+          </>
+        ) : null}
+        {s.mapScope === 'all-dfw' ? (
+          <View style={styles.wrap}>
+            <Chip label={t('All source areas', 'Todas las áreas')} selected onPress={() => {}} />
+            <Button
+              variant="quiet"
+              label={t('Browse full District 6 source', 'Ver fuente completa del distrito 6')}
+              onPress={() => s.setMapScope('tx06')}
+            />
+            <Button
+              variant="quiet"
+              label={t('Browse full District 30 source', 'Ver fuente completa del distrito 30')}
+              onPress={() => s.setMapScope('tx30')}
+            />
+          </View>
+        ) : null}
         <Field
           label={t('SEARCH PARKS, TRAILS & PLACES', 'BUSCAR PARQUES, SENDEROS Y LUGARES')}
           value={search}
@@ -328,22 +358,10 @@ export function Relief({ s }: { s: HeatGuardState }) {
             setSearchLimit(8);
             setListLimit(30);
           }}
-          placeholder={
-            s.mapScope === 'dallas-county'
-              ? t(
-                  'Try Garland, Irving, Richardson, Mesquite…',
-                  'Prueba Garland, Irving, Richardson, Mesquite…',
-                )
-              : s.mapScope === 'tx30'
-                ? t(
-                    'Try Dallas, Cedar Hill, Lancaster, Duncanville…',
-                    'Prueba Dallas, Cedar Hill, Lancaster, Duncanville…',
-                  )
-                : t(
-                    'Try Waxahachie, Corsicana, Palestine, Cherokee…',
-                    'Prueba Waxahachie, Corsicana, Palestine, Cherokee…',
-                  )
-          }
+          placeholder={t(
+            'Search a park, trail, community or relief place…',
+            'Busca un parque, sendero, comunidad o lugar de alivio…',
+          )}
         />
         {query ? (
           <View style={styles.wrap}>
@@ -432,14 +450,9 @@ export function Relief({ s }: { s: HeatGuardState }) {
                   ? 'dallas'
                   : p.name.startsWith('Arlington')
                     ? 'arlington'
-                    : 'nearby';
-                if (scope === 'nearby') {
-                  s.setMapScope('nearby');
-                  run(() => s.changePlace(p));
-                } else {
-                  s.setMapScope(scope);
-                  explore(p);
-                }
+                    : 'fort-worth';
+                s.setMapScope(scope);
+                explore(p);
               }}
             />
           ))}
@@ -550,10 +563,10 @@ export function Relief({ s }: { s: HeatGuardState }) {
                 )}
           </Copy>
         ) : null}
-        <Copy style={{ fontSize: 12 }} color="#4587AD">
+        <Copy style={{ fontSize: 12 }} color={C.blue}>
           ● {t('Drinking water', 'Agua potable')}
         </Copy>
-        <Copy style={{ fontSize: 12 }} color="#53864F">
+        <Copy style={{ fontSize: 12 }} color={C.green}>
           ● {t('Shelter / potential tree shade', 'Refugio / posible sombra de árboles')}
         </Copy>
         <Copy style={{ fontSize: 12 }} color={C.orange}>

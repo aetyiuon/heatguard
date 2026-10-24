@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import { HeatGuardState } from '../state/useHeatGuard';
 import {
@@ -14,11 +14,20 @@ import {
   useLocale,
 } from '../ui/components';
 import { C, rounded, styles } from '../ui/theme';
-import { SunBuddy } from '../ui/SunBuddy';
 import { HEAT_RISK, TIERS } from '../domain/sources';
 import { heatIndexTier, toF } from '../domain/risk';
+import {
+  currentWeatherSource,
+  weatherAgeMinutes,
+  weatherFreshness,
+  WEATHER_REFRESH_MS,
+} from '../domain/weather';
 import { Workload } from '../domain/types';
+import { PersonalSummary } from './PersonalCheckIn';
+import { translatePersonalReason } from '../domain/personal';
+import { GlassSurface } from '../ui/glass';
 export function Home({ s }: { s: HeatGuardState }) {
+  const [weatherDetails, setWeatherDetails] = useState(false);
   const { t, lang } = useLocale(),
     { width } = useWindowDimensions(),
     wide = width > 1200,
@@ -28,6 +37,18 @@ export function Home({ s }: { s: HeatGuardState }) {
   const level = w?.heatRisk === undefined ? undefined : HEAT_RISK[w.heatRisk];
   const severity = r ? TIERS[r.tier] : undefined;
   const fallback = r ? TIERS[heatIndexTier(r.heatIndexF)] : undefined;
+  const freshness = weatherFreshness(w, s.now);
+  const readingAge = weatherAgeMinutes(w, s.now);
+  const source = w ? currentWeatherSource(w) : 'unknown';
+  const temperatureTone =
+    w && freshness === 'current' && !s.cached && !s.weatherFailed && r
+      ? [
+          { backgroundColor: C.paper, borderColor: C.limeEdge },
+          { backgroundColor: C.paper, borderColor: C.peachEdge },
+          { backgroundColor: C.paper, borderColor: C.orange },
+          { backgroundColor: C.redSoft, borderColor: C.redEdge },
+        ][r.tier]
+      : { backgroundColor: C.soft, borderColor: C.line };
   const run = (f: () => Promise<unknown>) => void f().catch((e) => s.setError(String(e)));
   const timer = s.session
     ? `${Math.floor(s.remainingSeconds / 60)
@@ -42,33 +63,183 @@ export function Home({ s }: { s: HeatGuardState }) {
     <View style={{ gap: 20 }}>
       <View style={[styles.row, { alignItems: 'center', gap: 8 }]}>
         <View style={{ flex: 1, gap: 6 }}>
-          <Copy kind="label">
-            {t('A LITTLE AWARENESS. A COOLER DAY.', 'MÁS CONCIENCIA. UN DÍA MÁS FRESCO.')}
-          </Copy>
-          <Copy kind="title">
-            {t('A cooler day starts here.', 'Un día más fresco empieza aquí.')}
-          </Copy>
+          <Copy kind="label">{t('TODAY / OVERVIEW', 'HOY / RESUMEN')}</Copy>
+          <Copy kind="title">{t('Your heat outlook.', 'Tu panorama del calor.')}</Copy>
           <Copy>
             {t(
-              'Your conditions. Your pace. A plan to get out of the heat.',
-              'Tus condiciones. Tu ritmo. Un plan para salir del calor.',
+              'Local conditions, your personal factors and a plan to cool down.',
+              'Condiciones locales, factores personales y un plan para refrescarte.',
             )}
           </Copy>
         </View>
-        {narrow ? (
-          <SunBuddy size={76} concerned={Boolean(r && (r.tier >= 2 || r.stopReason))} />
-        ) : null}
       </View>
-      <View style={[wide ? styles.row : { gap: 16 }, { alignItems: wide ? 'stretch' : undefined }]}>
+      <Card style={[temperatureTone, { padding: narrow ? 20 : 24, gap: 12 }]}>
+        <View style={[styles.row, { justifyContent: 'space-between', flexWrap: 'wrap' }]}>
+          <Copy kind="label">{t('CURRENT WEATHER', 'TIEMPO ACTUAL')}</Copy>
+          <Copy
+            style={{
+              fontSize: 12,
+              fontWeight: '500',
+              color: freshness === 'stale' || freshness === 'invalid' ? C.red : C.ink,
+            }}
+          >
+            {s.loading
+              ? t('Updating…', 'Actualizando…')
+              : !w
+                ? t('Waiting for weather', 'Esperando el tiempo')
+                : freshness !== 'current'
+                  ? t('Outdated or invalid reading', 'Lectura antigua o no válida')
+                  : s.cached
+                    ? t('Saved reading', 'Lectura guardada')
+                    : s.weatherFailed
+                      ? t('Update unavailable', 'Actualización no disponible')
+                      : t('Auto refresh on', 'Actualización automática activa')}
+          </Copy>
+        </View>
+        <Copy style={{ fontSize: 14 }}>{s.place.name}</Copy>
         <View
+          style={[
+            styles.row,
+            { justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center' },
+          ]}
+        >
+          <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+            {!narrow ? <IconBadge name="sun" color={C.orange} bg={C.soft} size={52} /> : null}
+            <View>
+              <Copy
+                style={{
+                  fontFamily: rounded,
+                  fontSize: narrow ? 52 : 72,
+                  lineHeight: narrow ? 64 : 84,
+                  fontWeight: '500',
+                  letterSpacing: -3,
+                }}
+              >
+                {w && Number.isFinite(w.current.temperatureC)
+                  ? `${Math.round(toF(w.current.temperatureC))}°F`
+                  : '—°F'}
+              </Copy>
+              <Copy style={{ fontSize: 13 }}>
+                {t('Air temperature', 'Temperatura del aire')}
+                {w && Number.isFinite(w.current.temperatureC)
+                  ? ` · ${Math.round(w.current.temperatureC)}°C`
+                  : ''}
+              </Copy>
+            </View>
+          </View>
+          <View style={{ gap: 5, flexShrink: 1 }}>
+            <Copy style={{ fontSize: narrow ? 12 : 15, fontWeight: '500' }}>
+              {t('Heat index (shade)', 'Índice (sombra)')}:{' '}
+              {r ? `${Math.round(r.heatIndexF)}°F` : '—'}
+            </Copy>
+            <Copy style={{ fontSize: narrow ? 12 : 15 }}>
+              {t('Humidity', 'Humedad')}: {w ? `${Math.round(w.current.humidity)}%` : '—'}
+            </Copy>
+            <Copy style={{ fontSize: narrow ? 12 : 15 }}>
+              {t('Personal concern', 'Riesgo personal')}:{' '}
+              {severity ? (lang === 'es' ? severity.es : severity.name) : '—'}
+            </Copy>
+          </View>
+        </View>
+        <View accessibilityLiveRegion="polite" style={{ gap: 6 }}>
+          <Copy style={{ fontSize: 13 }}>
+            {source === 'modeled'
+              ? t(
+                  'Open-Meteo · modeled current conditions',
+                  'Open-Meteo · condiciones actuales modeladas',
+                )
+              : source === 'forecast'
+                ? t(
+                    'NWS · hourly forecast fallback, not an observation',
+                    'NWS · pronóstico horario de respaldo, no una observación',
+                  )
+                : source === 'observation'
+                  ? t('Weather observation', 'Observación meteorológica')
+                  : t('Weather source unavailable', 'Fuente del tiempo no disponible')}
+          </Copy>
+          {w && readingAge !== null ? (
+            <Copy style={{ fontSize: 13 }}>
+              {t('Reading', 'Lectura')}:{' '}
+              {new Date(w.current.time).toLocaleString(lang === 'es' ? 'es-US' : 'en-US')}
+              {t(` · ${readingAge} min ago`, ` · hace ${readingAge} min`)}
+            </Copy>
+          ) : null}
+          {w && freshness !== 'current' ? (
+            <Copy color={C.red}>
+              {t(
+                'This reading is too old or invalid. Refresh before starting activity.',
+                'Esta lectura es antigua o no válida. Actualiza antes de iniciar actividad.',
+              )}
+            </Copy>
+          ) : s.cached || s.weatherFailed ? (
+            <Copy>
+              {t(
+                'The latest check was unavailable. Previous readings may be out of date; retry below.',
+                'La última consulta no estuvo disponible. Las lecturas anteriores pueden estar desactualizadas; vuelve a intentar abajo.',
+              )}
+            </Copy>
+          ) : null}
+        </View>
+        <View style={[styles.row, { justifyContent: 'space-between', flexWrap: 'wrap' }]}>
+          {weatherDetails ? (
+            <Copy style={{ fontSize: 12, flex: 1, minWidth: 170 }}>
+              {t(
+                `Checks every ${WEATHER_REFRESH_MS / 60000} min while open and when you return.`,
+                `Consulta cada ${WEATHER_REFRESH_MS / 60000} min mientras está abierta y al volver.`,
+              )}
+              {s.lastWeatherCheckAt
+                ? t(
+                    ` Last checked ${new Date(s.lastWeatherCheckAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}.`,
+                    ` Última consulta: ${new Date(s.lastWeatherCheckAt).toLocaleTimeString('es-US', { hour: 'numeric', minute: '2-digit' })}.`,
+                  )
+                : ''}
+              {source === 'modeled'
+                ? t(
+                    ' Modeled data uses 15-minute time steps, so repeated checks may show the same reading.',
+                    ' Los datos modelados usan intervalos de 15 minutos; varias consultas pueden mostrar la misma lectura.',
+                  )
+                : ''}
+            </Copy>
+          ) : null}
+        </View>
+        <View style={styles.wrap}>
+          <Button
+            variant="quiet"
+            label={
+              s.loading
+                ? narrow
+                  ? t('Updating…', 'Actualizando…')
+                  : t('Updating temperature…', 'Actualizando temperatura…')
+                : narrow
+                  ? t('Refresh', 'Actualizar')
+                  : t('Refresh temperature', 'Actualizar temperatura')
+            }
+            disabled={s.loading}
+            icon="refresh"
+            onPress={() => void s.refresh()}
+          />
+          <Button
+            variant="quiet"
+            expanded={weatherDetails}
+            label={
+              weatherDetails
+                ? t('Hide weather details', 'Ocultar detalles')
+                : t('Weather details', 'Detalles del tiempo')
+            }
+            onPress={() => setWeatherDetails((value) => !value)}
+          />
+        </View>
+      </Card>
+      <View style={[wide ? styles.row : { gap: 16 }, { alignItems: wide ? 'stretch' : undefined }]}>
+        <GlassSurface
           style={{
             flex: wide ? 1.65 : undefined,
-            backgroundColor: C.peach,
-            borderRadius: 20,
+            backgroundColor: C.paper,
+            borderRadius: 24,
             padding: narrow ? 20 : 28,
             gap: 18,
-            borderColor: C.peachEdge,
-            borderWidth: 2,
+            borderColor: C.line,
+            borderWidth: 1,
           }}
         >
           <View style={[styles.row, { justifyContent: 'space-between', flexWrap: 'wrap' }]}>
@@ -82,11 +253,13 @@ export function Home({ s }: { s: HeatGuardState }) {
                 }}
               />
               <Copy kind="label">
-                {s.cached
-                  ? t('CACHED · CHECK DATA AGE', 'GUARDADO · REVISA LA FECHA')
-                  : w
-                    ? t('LATEST AVAILABLE CONDITIONS', 'ÚLTIMAS CONDICIONES DISPONIBLES')
-                    : t('READY WHEN YOU ARE', 'LISTO CUANDO TÚ LO ESTÉS')}
+                {w && freshness !== 'current'
+                  ? t('OUTDATED · REFRESH NEEDED', 'DATOS ANTIGUOS · ACTUALIZA')
+                  : s.cached
+                    ? t('CACHED · CHECK DATA AGE', 'GUARDADO · REVISA LA FECHA')
+                    : w
+                      ? t('LATEST AVAILABLE CONDITIONS', 'ÚLTIMAS CONDICIONES DISPONIBLES')
+                      : t('READY WHEN YOU ARE', 'LISTO CUANDO TÚ LO ESTÉS')}
               </Copy>
             </View>
             <View
@@ -94,12 +267,19 @@ export function Home({ s }: { s: HeatGuardState }) {
                 paddingHorizontal: 12,
                 paddingVertical: 6,
                 borderRadius: 12,
-                borderWidth: 2,
-                borderColor: C.peachEdge,
-                backgroundColor: C.paper,
+                borderWidth: 1,
+                borderColor: r?.stopReason ? C.redEdge : C.limeEdge,
+                backgroundColor: r?.stopReason ? C.redSoft : C.lime,
               }}
             >
-              <Copy style={{ fontFamily: rounded, fontSize: 13, color: C.ink, fontWeight: '800' }}>
+              <Copy
+                style={{
+                  fontFamily: rounded,
+                  fontSize: 12,
+                  color: r?.stopReason ? C.red : C.green,
+                  fontWeight: '500',
+                }}
+              >
                 {severity
                   ? lang === 'es'
                     ? severity.es
@@ -123,10 +303,10 @@ export function Home({ s }: { s: HeatGuardState }) {
                   color={r?.stopReason ? C.red : C.ink}
                   style={{
                     fontFamily: rounded,
-                    fontWeight: '900',
+                    fontWeight: '500',
                     fontSize: width < 400 ? 56 : 68,
                     lineHeight: width < 400 ? 66 : 78,
-                    letterSpacing: -2,
+                    letterSpacing: -3,
                   }}
                 >
                   {r?.stopReason ? t('Pause', 'Pausa') : timer}
@@ -138,10 +318,11 @@ export function Home({ s }: { s: HeatGuardState }) {
               <Copy color={C.ink} style={{ fontSize: 14, lineHeight: 21, maxWidth: 380 }}>
                 {r?.stopReason
                   ? lang === 'es'
-                    ? t(
+                    ? (translatePersonalReason(r.stopReason) ??
+                      t(
                         '',
                         'Pospón la actividad y enfríate. Revisa las condiciones y los factores personales.',
-                      )
+                      ))
                     : r.stopReason
                   : r
                     ? t(
@@ -154,14 +335,9 @@ export function Home({ s }: { s: HeatGuardState }) {
                       )}
               </Copy>
             </View>
-            {!narrow ? (
-              <SunBuddy
-                size={wide ? 160 : 140}
-                concerned={Boolean(r && (r.tier >= 2 || r.stopReason))}
-              />
-            ) : null}
+            {!narrow ? <IconBadge name="clock" size={64} color={C.green} bg={C.lime} /> : null}
           </View>
-          <View style={{ height: 2, backgroundColor: C.peachEdge }} />
+          <View style={styles.divider} />
           <View
             style={[
               narrow ? { gap: 14 } : styles.row,
@@ -170,7 +346,7 @@ export function Home({ s }: { s: HeatGuardState }) {
           >
             <Copy
               kind="label"
-              color="#7A5A00"
+              color={C.muted}
               style={{ fontSize: 11, maxWidth: 360, flexShrink: 1 }}
             >
               {t(
@@ -223,25 +399,25 @@ export function Home({ s }: { s: HeatGuardState }) {
               )}
             </Copy>
           ) : null}
-        </View>
+        </GlassSurface>
         <Card
           style={{
             flex: wide ? 1 : undefined,
-            backgroundColor: C.blueDeep,
-            borderColor: C.blueDeep,
+            backgroundColor: C.paper,
+            borderColor: C.line,
             justifyContent: 'space-between',
           }}
         >
           <View style={[styles.row, { justifyContent: 'space-between' }]}>
-            <Copy kind="label" color="white">
+            <Copy kind="label" color={C.muted}>
               {t('TODAY’S HEAT OUTLOOK', 'PANORAMA DEL CALOR')}
             </Copy>
             <Icon name="sun" color={C.yellow} />
           </View>
           <View style={{ gap: 8 }}>
             <Copy
-              color="white"
-              style={{ fontFamily: rounded, fontWeight: '800', fontSize: 30, lineHeight: 37 }}
+              color={C.ink}
+              style={{ fontFamily: rounded, fontWeight: '500', fontSize: 30, lineHeight: 38 }}
             >
               {level
                 ? lang === 'es'
@@ -251,7 +427,7 @@ export function Home({ s }: { s: HeatGuardState }) {
                   ? t(`${fallback.name} concern`, `${fallback.es}: precaución`)
                   : t('Check the outlook', 'Revisa el panorama')}
             </Copy>
-            <Copy color="white" style={{ fontSize: 14, lineHeight: 21 }}>
+            <Copy color={C.muted} style={{ fontSize: 14, lineHeight: 21 }}>
               {level
                 ? t(
                     `NWS HeatRisk ${w!.heatRisk}/4 · daily forecast`,
@@ -274,8 +450,8 @@ export function Home({ s }: { s: HeatGuardState }) {
                 key={i}
                 style={{
                   flex: 1,
-                  height: 12,
-                  borderRadius: 6,
+                  height: 5,
+                  borderRadius: 3,
                   backgroundColor: v.color,
                   opacity: w?.heatRisk === undefined || w.heatRisk === i ? 1 : 0.35,
                 }}
@@ -290,6 +466,24 @@ export function Home({ s }: { s: HeatGuardState }) {
           />
         </Card>
       </View>
+      <PersonalSummary s={s} />
+      <Card>
+        <Copy kind="label">{t('PLAN YOUR JOURNEY', 'PLANEA TU RECORRIDO')}</Copy>
+        <Copy kind="h2">
+          {t('Your route, with room to cool down.', 'Tu ruta, con espacio para refrescarte.')}
+        </Copy>
+        <Copy>
+          {t(
+            'Map a route or record your walk/run. Review nearby relief, distance, pace and cooling-break guidance.',
+            'Planea una ruta o graba tu caminata/carrera. Revisa alivio cercano, distancia, ritmo y descansos.',
+          )}
+        </Copy>
+        <Button
+          icon="arrow"
+          label={t('Plan or record a journey', 'Planear o grabar recorrido')}
+          onPress={() => s.setTab('journey')}
+        />
+      </Card>
       <Disclaimer place={s.place} />
       <View style={{ gap: 12 }}>
         <View style={[styles.row, { justifyContent: 'space-between', flexWrap: 'wrap' }]}>
@@ -311,6 +505,12 @@ export function Home({ s }: { s: HeatGuardState }) {
             />
           ))}
         </View>
+        <Copy style={{ fontSize: 12 }}>
+          {t(
+            'Activity is our proxy for metabolic heat: light = easy walking; moderate = brisk walking or gardening; heavy = running or strenuous labor. We do not infer metabolism from pulse or calculate heat tolerance from a calorie formula.',
+            'La actividad representa calor metabólico: ligera = paseo suave; moderada = caminar rápido o jardinería; intensa = correr o trabajo exigente. No inferimos metabolismo del pulso ni tolerancia al calor de una fórmula de calorías.',
+          )}
+        </Copy>
       </View>
       <Card>
         <Copy kind="label">
@@ -348,7 +548,7 @@ export function Home({ s }: { s: HeatGuardState }) {
             [
               'sun',
               C.orange,
-              '#FFF0D9',
+              C.peach,
               t('Air temperature', 'Temperatura'),
               w ? `${Math.round(toF(w.current.temperatureC))}°F` : '—',
             ],
@@ -368,8 +568,8 @@ export function Home({ s }: { s: HeatGuardState }) {
             ],
             [
               'shield',
-              '#9B59D0',
-              '#F3E8FC',
+              C.purple,
+              C.purpleSoft,
               t('UV / AirNow AQI', 'UV / ICA AirNow'),
               w ? `${w.current.uv?.toFixed(1) ?? '—'} / ${w.aqi?.value ?? '—'}` : '—',
             ],

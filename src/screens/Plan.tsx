@@ -47,7 +47,7 @@ export function Plan({ s }: { s: HeatGuardState }) {
                     styles.row,
                     {
                       paddingVertical: 12,
-                      borderTopWidth: 2,
+                      borderTopWidth: 1,
                       borderColor: C.line,
                     },
                   ]}
@@ -63,7 +63,7 @@ export function Plan({ s }: { s: HeatGuardState }) {
                   <View style={{ flex: 1, gap: 2 }}>
                     <Copy
                       color={C.ink}
-                      style={{ fontFamily: rounded, fontWeight: '800', fontSize: 16 }}
+                      style={{ fontFamily: rounded, fontWeight: '500', fontSize: 16 }}
                     >
                       {new Date(d.date + 'T12:00:00Z').toLocaleDateString(
                         lang === 'es' ? 'es-US' : 'en-US',
@@ -84,7 +84,7 @@ export function Plan({ s }: { s: HeatGuardState }) {
                         fontFamily: rounded,
                         fontSize: 24,
                         lineHeight: 30,
-                        fontWeight: '800',
+                        fontWeight: '500',
                       }}
                     >
                       {Math.round(toF(d.highC))}°
@@ -115,7 +115,7 @@ export function Plan({ s }: { s: HeatGuardState }) {
                       minWidth: 86,
                       flex: 1,
                       borderRadius: 16,
-                      borderWidth: 2,
+                      borderWidth: 1,
                       borderColor: C.blueEdge,
                       backgroundColor: C.blueSoft,
                       padding: 14,
@@ -133,7 +133,7 @@ export function Plan({ s }: { s: HeatGuardState }) {
                         fontFamily: rounded,
                         fontSize: 22,
                         lineHeight: 28,
-                        fontWeight: '800',
+                        fontWeight: '500',
                       }}
                     >
                       {Math.round(hi)}°F

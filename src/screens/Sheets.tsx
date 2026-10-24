@@ -5,6 +5,7 @@ import { Button, Card, Chip, Copy, Field, Icon, useLocale } from '../ui/componen
 import { C, styles } from '../ui/theme';
 import { Activity, recommendGear } from '../domain/wardrobe';
 import { SOURCES } from '../domain/sources';
+import { translatePersonalReason } from '../domain/personal';
 import { readLocal, writeLocal } from '../services/storage';
 export function LocationSheet({ s }: { s: HeatGuardState }) {
   const { t } = useLocale();
@@ -241,6 +242,32 @@ export function MethodSheet({ s }: { s: HeatGuardState }) {
         </Copy>
       </Card>
       <Card>
+        <Copy kind="h2">
+          {t(
+            'Personal readings: context, not clearance',
+            'Lecturas personales: contexto, no autorización',
+          )}
+        </Copy>
+        <Copy>
+          {t(
+            'Today’s check-in combines symptoms, self-reported hydration, clothing and optional manual readings with the saved profile and chosen activity. Activity represents metabolic heat; we do not estimate a personal metabolic rate, dehydration percentage, core temperature or time to injury.',
+            'La revisión combina síntomas, hidratación declarada, ropa y lecturas manuales con el perfil y la actividad. La actividad representa calor metabólico; no estimamos metabolismo personal, porcentaje de deshidratación, temperatura central ni tiempo hasta lesión.',
+          )}
+        </Copy>
+        <Copy>
+          {t(
+            'Symptoms override weather and timers. Adult resting pulse above 100 bpm and thermometer readings ≥38°C trigger conservative pause rules, not a heat-illness diagnosis. The pulse rule requires a known adult age and 5 minutes of quiet rest. Exercise pulse and wrist temperature are context only. A normal reading never lengthens the original recommendation.',
+            'Los síntomas tienen prioridad sobre el clima y temporizadores. Pulso adulto en reposo mayor de 100 lpm y termómetro ≥38°C activan pausas conservadoras, no diagnóstico. El pulso requiere edad adulta conocida y 5 minutos de reposo. Pulso en ejercicio y temperatura de muñeca son solo contexto. Una lectura normal nunca amplía la recomendación original.',
+          )}
+        </Copy>
+        <Copy>
+          {t(
+            'The 30-minute check-in and 5-minute reading freshness intervals are HeatGuard policy. An outdated check-in pauses the timer; a previous abnormal reading or symptom report stays a caution until reassessed. Saving a new check-in is not medical clearance. Measurements are optional, remain local and are never included in weather requests.',
+            'Los intervalos de 30 minutos para revisión y 5 para lecturas son política de HeatGuard. Una revisión antigua pausa el temporizador; lecturas anormales o síntomas previos siguen como precaución hasta reevaluar. Guardar no es autorización médica. Las mediciones son opcionales, locales y no se envían con solicitudes del tiempo.',
+          )}
+        </Copy>
+      </Card>
+      <Card>
         <Copy kind="h2">{t('Read the source guidance', 'Consulta las fuentes')}</Copy>
         {[
           ['NIOSH work/rest schedule', SOURCES.schedules],
@@ -249,6 +276,10 @@ export function MethodSheet({ s }: { s: HeatGuardState }) {
           ['NWS HeatRisk categories', SOURCES.heatRisk],
           ['CDC heat and medications', SOURCES.medicines],
           ['Stull wet-bulb approximation', SOURCES.wetBulb],
+          ['AHA resting pulse context', SOURCES.pulse],
+          ['NHS adult thermometer context', SOURCES.temperature],
+          ['Apple HealthKit authorization', SOURCES.healthKit],
+          ['Apple Watch sleeping wrist temperature', SOURCES.wristTemperature],
         ].map(([name, url]) => (
           <Button
             key={url}
@@ -257,7 +288,7 @@ export function MethodSheet({ s }: { s: HeatGuardState }) {
             onPress={() => void Linking.openURL(url!)}
           />
         ))}
-        <Copy style={{ fontSize: 12 }}>HeatGuard model v{r?.modelVersion ?? '0.1.0'}</Copy>
+        <Copy style={{ fontSize: 12 }}>HeatGuard model v{r?.modelVersion ?? '0.2.0'}</Copy>
       </Card>
       {s.weather?.warnings.length ? (
         <Card>
@@ -302,7 +333,7 @@ function spanishReason(v: string) {
     'Resting uses a cautious planning proxy; NIOSH work schedules were developed for workers.':
       'El reposo usa una aproximación conservadora; los horarios NIOSH se crearon para trabajadores.',
   };
-  return phrases[v] ?? 'Un factor requiere mayor precaución.';
+  return translatePersonalReason(v) ?? phrases[v] ?? 'Un factor requiere mayor precaución.';
 }
 export function WardrobeSheet({ s }: { s: HeatGuardState }) {
   const { t, lang } = useLocale();
