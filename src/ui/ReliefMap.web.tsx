@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { ReliefTrail } from '../domain/types';
 import { MapProps } from './maps.types';
 import { pickedCoordinates } from '../domain/relief';
+import { C } from './theme';
 const EMPTY_TRAILS: ReliefTrail[] = [];
 const EMPTY_REPORTS: NonNullable<MapProps['reports']> = [];
 export default function ReliefMap({
@@ -20,8 +21,16 @@ export default function ReliefMap({
   picking = false,
   pickedPoint,
   onPickLocation,
+  routePaths,
+  routeDashed = false,
 }: MapProps) {
   const ref = useRef<HTMLIFrameElement>(null);
+  const sendRoute = () =>
+    ref.current?.contentWindow?.postMessage(
+      { heatguardRoute: true, paths: routePaths ?? [], dashed: routeDashed },
+      '*',
+    );
+  useEffect(sendRoute, [routePaths, routeDashed]);
   useEffect(() => {
     const receive = (e: MessageEvent) => {
       if (e.source === ref.current?.contentWindow && picking) {
@@ -64,17 +73,32 @@ export default function ReliefMap({
     }).replace(/</g, '\\u003c');
     return `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<style>html,body,#map{height:100%;margin:0;background:#e9eee0;font-family:system-ui}.leaflet-popup-content{font-size:13px}.marker{border:2px solid white;box-shadow:0 1px 6px #0004;border-radius:50%;width:23px;height:23px;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700}.place-label{font-size:11px;border:0;box-shadow:0 1px 4px #0002;color:#223D35;background:#fffcf3ed;padding:3px 5px;max-width:180px;overflow:hidden;text-overflow:ellipsis}.leaflet-control-attribution{font-size:10px}</style>
+<style>
+html,body,#map{height:100%;margin:0;background:${C.bg};font-family:system-ui;color:${C.ink};color-scheme:dark}
+/* Only street tiles are recolored. NOAA HeatRisk tiles retain their official colors. */
+.base-streets{filter:invert(1) hue-rotate(180deg) brightness(.72) saturate(.5)}
+.leaflet-popup-content{font-size:13px;line-height:1.6}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip,.leaflet-tooltip{background:${C.paper};color:${C.ink};border-color:${C.line}}
+.leaflet-bar{border:1px solid ${C.line}!important;box-shadow:0 4px 12px #0004}
+.leaflet-bar a,.leaflet-bar a:hover{background:${C.paper};color:${C.ink};border-bottom-color:${C.line}}
+.leaflet-bar a:hover{background:${C.soft}}.leaflet-bar a:focus-visible{outline:2px solid ${C.blue};outline-offset:2px}
+.leaflet-container a{color:${C.blue}}.leaflet-container a.leaflet-popup-close-button{color:${C.muted}}
+.marker{border:2px solid ${C.ink};box-shadow:0 2px 8px #0006;border-radius:50%;width:23px;height:23px;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700}
+.place-label{font-size:11px;border:1px solid ${C.line};box-shadow:0 2px 6px #0005;color:${C.ink};background:${C.paper};padding:4px 7px;max-width:180px;overflow:hidden;text-overflow:ellipsis;border-radius:5px}
+.leaflet-control-attribution{font-size:10px;background:${C.paper}!important;color:${C.muted}}
+</style>
 </head><body><div id="map" role="application" aria-label="Drinking fountains, shade shelters and trails"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>
 const d=${data};
 const map=L.map('map',{scrollWheelZoom:true,dragging:true,preferCanvas:true}).setView([d.place.latitude,d.place.longitude],15);
 new ResizeObserver(()=>map.invalidateSize()).observe(document.getElementById('map'));
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:19}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{className:'base-streets',attribution:'© OpenStreetMap contributors',maxZoom:19}).addTo(map);
 const safeText=t=>{const el=document.createElement('span');el.textContent=t;return el;};
+const journey=L.layerGroup().addTo(map);
+window.addEventListener('message',e=>{if(e.source!==parent||e.data?.heatguardRoute!==true||!Array.isArray(e.data.paths))return;const paths=e.data.paths;if(paths.flat().length>20000||!paths.every(path=>Array.isArray(path)&&path.every(p=>Number.isFinite(p.latitude)&&Number.isFinite(p.longitude)&&Math.abs(p.latitude)<=90&&Math.abs(p.longitude)<=180)))return;journey.clearLayers();paths.forEach(path=>{if(path.length>1)L.polyline(path.map(p=>[p.latitude,p.longitude]),{color:'${C.green}',weight:5,opacity:.95,dashArray:e.data.dashed?'8,8':undefined}).addTo(journey);});const points=paths.flat();if(points.length){[points[0],points[points.length-1]].forEach((p,i)=>L.circleMarker([p.latitude,p.longitude],{radius:7,color:'${C.ink}',fillColor:i?'${C.orange}':'${C.green}',fillOpacity:1}).addTo(journey).bindTooltip(safeText(i?'Route end':'Route start')));}});
 if(d.picking){document.getElementById('map').style.cursor='crosshair';map.on('click',e=>parent.postMessage({pickedPoint:{latitude:e.latlng.lat,longitude:e.latlng.lng}},'*'));}
 const asBounds=b=>[[b[1],b[0]],[b[3],b[2]]];
-if(d.city){L.geoJSON({type:'MultiPolygon',coordinates:d.city.boundary},{style:{color:'#7958A5',weight:2,fillOpacity:.015,dashArray:'7,5'}}).addTo(map).bindTooltip(safeText(d.city.boundaryLabel||d.city.name+' · city limits'));(d.city.regions||[]).forEach(r=>L.geoJSON({type:'MultiPolygon',coordinates:r.polygons},{style:{color:'#7B8585',weight:1,fillOpacity:0,dashArray:'3,5'}}).addTo(map).bindTooltip(safeText(r.name+(d.city.areaType==='county'?(r.partial?' · county portion':''):' County · district portion'))));if(d.showParks)d.city.parks.forEach(p=>L.geoJSON({type:'MultiPolygon',coordinates:p.polygons},{style:{color:'#70906C',weight:1,fillColor:'#8AB07B',fillOpacity:.16}}).addTo(map).bindTooltip(safeText(p.name+' · mapped park; shade unverified')).bindPopup(safeText(p.name+(p.address?' · '+p.address:'')+' · Mapped park boundary; not a shade measurement')));}
+if(d.city){L.geoJSON({type:'MultiPolygon',coordinates:d.city.boundary},{style:{color:'#7958A5',weight:2,fillOpacity:.015,dashArray:'7,5'}}).addTo(map).bindTooltip(safeText(d.city.boundaryLabel||d.city.name+' · city limits'));(d.city.regions||[]).forEach(r=>L.geoJSON({type:'MultiPolygon',coordinates:r.polygons},{style:{color:'#7B8585',weight:1,fillOpacity:0,dashArray:'3,5'}}).addTo(map).bindTooltip(safeText(r.name+(d.city.areaType==='county'?(r.partial?' · county portion':''):d.city.areaType==='city'?' · city/district intersection':' County · district portion'))));if(d.showParks)d.city.parks.forEach(p=>L.geoJSON({type:'MultiPolygon',coordinates:p.polygons},{style:{color:'#70906C',weight:1,fillColor:'#8AB07B',fillOpacity:.16}}).addTo(map).bindTooltip(safeText(p.name+' · mapped park; shade unverified')).bindPopup(safeText(p.name+(p.address?' · '+p.address:'')+' · Mapped park boundary; not a shade measurement')));}
 if(d.focus?.bounds)map.fitBounds(asBounds(d.focus.bounds),{padding:[25,25],maxZoom:16});else if(d.focus)map.setView([d.focus.latitude,d.focus.longitude],16);else if(d.city)map.fitBounds(asBounds(d.city.bounds),{padding:[12,12]});
 if(!d.city)L.circleMarker([d.place.latitude,d.place.longitude],{radius:7,color:'#fff',fillColor:'#223D35',fillOpacity:1}).addTo(map).bindPopup(safeText(d.place.name+' · viewing location'));
 if(d.pickedPoint)L.circleMarker([d.pickedPoint.latitude,d.pickedPoint.longitude],{radius:9,color:'#8B3F20',fillColor:'#FFB561',fillOpacity:1,weight:3}).addTo(map).bindTooltip(safeText('Your suggested location · unverified'));
@@ -116,6 +140,7 @@ if(d.heatLayer&&d.time){const HeatTiles=L.TileLayer.extend({getTileUrl:function(
     ref,
     title: 'Interactive relief map',
     srcDoc: html,
+    onLoad: sendRoute,
     sandbox: 'allow-scripts allow-same-origin',
     style: { width: '100%', height: 420, border: 0 },
     referrerPolicy: 'no-referrer',

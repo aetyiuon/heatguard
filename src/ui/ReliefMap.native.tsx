@@ -2,6 +2,16 @@ import React from 'react';
 import MapView, { Marker, Circle, Polyline, Polygon, WMSTile, Region } from 'react-native-maps';
 import { Text, View } from 'react-native';
 import { MapProps } from './maps.types';
+import { C } from './theme';
+// Google Maps style for Android; Apple Maps follows userInterfaceStyle on iOS.
+const DARK_STREETS = [
+  { elementType: 'geometry', stylers: [{ color: '#18242D' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#A3B1BE' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#18242D' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#30404D' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#102D3D' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1C342F' }] },
+];
 const colors = { water: '#4587AD', shade: '#53864F', ac: '#D8633E', 'cooling-center': '#7A0E7F' };
 const EMPTY_TRAILS: NonNullable<MapProps['trails']> = [];
 const EMPTY_REPORTS: NonNullable<MapProps['reports']> = [];
@@ -21,6 +31,8 @@ export default function ReliefMap({
   picking = false,
   pickedPoint,
   onPickLocation,
+  routePaths,
+  routeDashed = false,
 }: MapProps) {
   const map = React.useRef<MapView>(null);
   const initialRegion = React.useMemo(() => {
@@ -68,12 +80,31 @@ export default function ReliefMap({
       ref={map}
       style={{ height: 420, width: '100%' }}
       initialRegion={initialRegion}
+      userInterfaceStyle="dark"
+      customMapStyle={DARK_STREETS}
       onRegionChangeComplete={setRegion}
       onPress={(event) => {
         if (picking) onPickLocation?.(event.nativeEvent.coordinate);
       }}
       accessibilityLabel="Relief map: water, shade and air-conditioned places"
     >
+      {routePaths?.map((path, i) =>
+        path.length > 1 ? (
+          <Polyline
+            key={`journey-${i}`}
+            coordinates={path}
+            strokeColor={C.green}
+            strokeWidth={5}
+            lineDashPattern={routeDashed ? [8, 8] : undefined}
+          />
+        ) : null,
+      )}
+      {routePaths?.flat().length ? (
+        <Marker coordinate={routePaths.flat()[0]!} title="Route start" pinColor={C.green} />
+      ) : null}
+      {routePaths?.flat().length ? (
+        <Marker coordinate={routePaths.flat().at(-1)!} title="Route end" pinColor={C.orange} />
+      ) : null}
       {!city ? (
         <Marker coordinate={place} title="Your selected location" pinColor="#223D35" />
       ) : null}
@@ -204,8 +235,8 @@ export default function ReliefMap({
                 <Text
                   numberOfLines={1}
                   style={{
-                    backgroundColor: '#fffffff0',
-                    color: '#223D35',
+                    backgroundColor: C.paper,
+                    color: C.ink,
                     paddingHorizontal: 5,
                     paddingVertical: 2,
                     borderRadius: 4,

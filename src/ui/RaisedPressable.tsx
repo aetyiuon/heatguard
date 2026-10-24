@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, PressableProps, StyleProp, View, ViewStyle } from 'react-native';
 import { C } from './theme';
+import { useReducedTransparency } from './glass';
+import GlassMaterial from './GlassMaterial';
 
 type RaisedPressableProps = Omit<PressableProps, 'children' | 'style'> & {
   children: React.ReactNode;
@@ -11,6 +13,7 @@ type RaisedPressableProps = Omit<PressableProps, 'children' | 'style'> & {
   rim?: string;
   depth?: number;
   radius?: number;
+  glass?: boolean;
 };
 
 /** The base reserves its height, so pressing never moves neighboring controls. */
@@ -21,14 +24,17 @@ export function RaisedPressable({
   face = C.paper,
   edge = C.line,
   rim = edge,
-  depth = 4,
+  depth = 2,
   radius = 16,
+  glass = true,
   disabled,
   onFocus,
   onBlur,
   ...props
 }: RaisedPressableProps) {
   const [focused, setFocused] = useState(false);
+  const reduced = useReducedTransparency();
+  const translucent = glass && !reduced && face !== 'transparent';
   return (
     <Pressable
       {...props}
@@ -54,18 +60,20 @@ export function RaisedPressable({
     >
       {({ pressed }) => (
         <>
-          <View
-            style={{
-              pointerEvents: 'none',
-              position: 'absolute',
-              top: depth,
-              bottom: 0,
-              left: 0,
-              right: 0,
-              borderRadius: radius,
-              backgroundColor: edge,
-            }}
-          />
+          {depth > 0 && !translucent ? (
+            <View
+              style={{
+                pointerEvents: 'none',
+                position: 'absolute',
+                top: depth,
+                bottom: 0,
+                left: 0,
+                right: 0,
+                borderRadius: radius,
+                backgroundColor: edge,
+              }}
+            />
+          ) : null}
           <View
             style={[
               {
@@ -73,9 +81,10 @@ export function RaisedPressable({
                 paddingHorizontal: 17,
                 paddingVertical: 12,
                 borderRadius: radius,
-                borderWidth: 2,
-                borderColor: focused ? C.blueDeep : rim,
-                backgroundColor: face,
+                borderWidth: 1,
+                borderColor: focused ? C.blue : rim,
+                backgroundColor: translucent ? 'transparent' : face,
+                isolation: 'isolate',
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -85,6 +94,7 @@ export function RaisedPressable({
               { transform: [{ translateY: pressed && !disabled ? depth : 0 }] },
             ]}
           >
+            {translucent ? <GlassMaterial radius={radius} tint={face} reduced={false} /> : null}
             {children}
           </View>
         </>

@@ -15,6 +15,7 @@ import { C, rounded, styles } from './theme';
 import { RaisedPressable } from './RaisedPressable';
 import { Language, Place } from '../domain/types';
 import { SOURCES } from '../domain/sources';
+import { GlassSurface, useReducedTransparency } from './glass';
 export const LocaleContext = createContext<{ lang: Language; large: boolean }>({
   lang: 'en',
   large: false,
@@ -122,7 +123,7 @@ export function Icon({
       viewBox="0 0 24 24"
       fill="none"
       stroke={color}
-      strokeWidth={2.3}
+      strokeWidth={1.7}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
@@ -155,6 +156,7 @@ export function Button({
   icon,
   variant = 'primary',
   disabled = false,
+  expanded,
   style,
 }: {
   label: string;
@@ -162,10 +164,12 @@ export function Button({
   icon?: IconName;
   variant?: 'primary' | 'secondary' | 'quiet' | 'danger';
   disabled?: boolean;
+  expanded?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
+  const reducedTransparency = useReducedTransparency();
   const [color, face, edge] = {
-    primary: ['white', C.greenDeep, C.greenEdge],
+    primary: [reducedTransparency ? C.bg : C.ink, C.greenDeep, C.greenEdge],
     secondary: [C.blueInk, C.blueSoft, C.blueEdge],
     quiet: [C.muted, C.paper, C.line],
     danger: [C.red, C.redSoft, C.redEdge],
@@ -174,12 +178,12 @@ export function Button({
     <RaisedPressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled, ...(expanded === undefined ? {} : { expanded }) }}
       disabled={disabled}
       onPress={onPress}
       face={face}
       edge={edge}
-      depth={4}
+      depth={2}
       style={style}
     >
       {icon ? <Icon name={icon} size={19} color={color} /> : null}
@@ -187,11 +191,10 @@ export function Button({
         color={color}
         style={{
           fontFamily: rounded,
-          fontWeight: '800',
+          fontWeight: '600',
           fontSize: 15,
           lineHeight: 21,
-          letterSpacing: 0.6,
-          textTransform: 'uppercase',
+          letterSpacing: 0,
           textAlign: 'center',
           flexShrink: 1,
         }}
@@ -208,7 +211,7 @@ export function Card({
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
-  return <View style={[styles.card, style]}>{children}</View>;
+  return <GlassSurface style={[styles.card, style]}>{children}</GlassSurface>;
 }
 /** Rounded tile that frames an icon; decorative, so it stays out of the accessibility tree. */
 export function IconBadge({
@@ -223,7 +226,7 @@ export function IconBadge({
   size?: number;
 }) {
   return (
-    <View
+    <GlassSurface
       style={{
         width: size,
         height: size,
@@ -234,7 +237,7 @@ export function IconBadge({
       }}
     >
       <Icon name={name} size={size * 0.55} color={color} />
-    </View>
+    </GlassSurface>
   );
 }
 export function Chip({
@@ -258,7 +261,7 @@ export function Chip({
         selected ? (color && /^#[0-9a-f]{6}$/i.test(color) ? `${color}18` : C.blueSoft) : C.paper
       }
       edge={selected ? (color ?? C.blueEdge) : C.line}
-      depth={3}
+      depth={1}
       radius={14}
       contentStyle={{
         minHeight: 44,
@@ -276,7 +279,7 @@ export function Chip({
           fontFamily: rounded,
           fontSize: 14,
           lineHeight: 19,
-          fontWeight: '800',
+          fontWeight: '500',
           flexShrink: 1,
         }}
       >
@@ -344,11 +347,10 @@ export function Toggle({
       </Copy>
       <View
         style={{
-          width: 54,
-          height: 34,
-          borderWidth: 2,
-          borderBottomWidth: 4,
-          borderColor: value ? C.greenDeep : '#D2D2D2',
+          width: 48,
+          height: 30,
+          borderWidth: 1,
+          borderColor: value ? C.greenDeep : C.hare,
           backgroundColor: value ? C.green : C.line,
           borderRadius: 20,
           padding: 3,
@@ -357,9 +359,9 @@ export function Toggle({
       >
         <View
           style={{
-            backgroundColor: 'white',
-            width: 23,
-            height: 23,
+            backgroundColor: value ? C.bg : C.ink,
+            width: 22,
+            height: 22,
             borderRadius: 20,
             alignItems: 'center',
             justifyContent: 'center',
@@ -378,7 +380,7 @@ export function Disclaimer({ place }: { place: Place }) {
       style={{
         backgroundColor: C.soft,
         borderRadius: 18,
-        borderWidth: 2,
+        borderWidth: 1,
         borderColor: C.line,
         padding: 18,
         gap: 14,

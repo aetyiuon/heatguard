@@ -6,6 +6,8 @@ export interface MapProps {
   picking?: boolean;
   pickedPoint?: Pick<Place, 'latitude' | 'longitude'>;
   onPickLocation?: (point: Pick<Place, 'latitude' | 'longitude'>) => void;
+  routePaths?: Pick<Place, 'latitude' | 'longitude'>[][];
+  routeDashed?: boolean;
   trails?: ReliefTrail[];
   showLabels?: boolean;
   city?: CityDataset;

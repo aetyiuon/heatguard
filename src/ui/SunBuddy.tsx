@@ -2,7 +2,7 @@ import React from 'react';
 import Svg, { Circle, G, Line, Path, Rect } from 'react-native-svg';
 import { C } from './theme';
 
-// Drawn on a 120×120 grid. scripts/make-icons.ps1 redraws the same shapes for the app icon.
+// Legacy decorative export, unused by the current app. The active BrandMark is below.
 const RAYS = Array.from({ length: 8 }, (_, i) => (i * Math.PI) / 4);
 function Sun({ concerned }: { concerned: boolean }) {
   const ink = { stroke: C.ink, strokeWidth: 4.5, strokeLinecap: 'round' as const, fill: 'none' };
@@ -50,13 +50,21 @@ export function SunBuddy({
   );
 }
 
-/** App mark: the sun on a green tile, matching the native app icon. */
+/** Simple sun mark. Keep the 48-grid geometry in scripts/make-icons.ps1 in sync. */
 export function BrandMark({ size = 40 }: { size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 120 120" aria-hidden>
-      <Rect width="120" height="120" rx="28" fill={C.green} />
-      <G transform="translate(15 15) scale(0.75)">
-        <Sun concerned={false} />
+    <Svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
+      <Circle cx="24" cy="24" r="8" fill="none" stroke={C.orange} strokeWidth="2.5" />
+      <G stroke={C.orange} strokeWidth="2.5" strokeLinecap="round">
+        {RAYS.map((a) => (
+          <Line
+            key={a}
+            x1={24 + 13 * Math.cos(a)}
+            y1={24 + 13 * Math.sin(a)}
+            x2={24 + 18 * Math.cos(a)}
+            y2={24 + 18 * Math.sin(a)}
+          />
+        ))}
       </G>
     </Svg>
   );
