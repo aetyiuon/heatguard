@@ -113,6 +113,7 @@ export function normalizeMeteo(m: any, place: Place): WeatherBundle {
   }));
   return {
     fetchedAt: new Date().toISOString(),
+    currentSource: 'modeled',
     location: place,
     current,
     hourly: m.hourly.time
@@ -193,6 +194,7 @@ export async function getWeather(place: Place, env: WeatherEnv): Promise<Weather
     if (!hourly.length) throw new Error('No usable current conditions');
     bundle = {
       fetchedAt: new Date().toISOString(),
+      currentSource: 'forecast',
       location: place,
       current: hourly[0]!,
       hourly,

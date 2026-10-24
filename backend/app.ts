@@ -233,10 +233,18 @@ export async function handleRequest(request: Request, env: Env = {}): Promise<Re
             { error: 'Provide district=tx06 or district=tx30 without a city parameter.' },
             400,
           );
-        else if (city === 'arlington' || city === 'dallas')
+        else if (
+          city === 'arlington' ||
+          city === 'dallas' ||
+          city === 'fort-worth' ||
+          city === 'all-dfw'
+        )
           response = json(await bundledCity(city), 200, true);
         else if (city !== null)
-          response = json({ error: 'Provide a supported city: arlington or dallas.' }, 400);
+          response = json(
+            { error: 'Provide a supported city: arlington, dallas, fort-worth or all-dfw.' },
+            400,
+          );
         else
           response = json(await getRelief(parsePlace(url), env.MUNICIPAL_GEOJSON_URL), 200, true);
       } else response = json({ error: 'Route not found' }, 404);
