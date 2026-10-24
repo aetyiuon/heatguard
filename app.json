@@ -6,11 +6,14 @@
     "orientation": "portrait",
     "scheme": "heatguard",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B1016",
     "ios": {
       "bundleIdentifier": "org.heatguard.app",
       "supportsTablet": true,
+      "entitlements": { "com.apple.developer.healthkit": true },
       "infoPlist": {
+        "NSHealthShareUsageDescription": "With your permission, HeatGuard reads recent heart rate from Apple Health for optional journey context. It does not calculate a guaranteed safe outdoor duration.",
         "UIBackgroundModes": ["processing"],
         "BGTaskSchedulerPermittedIdentifiers": ["com.expo.modules.backgroundtask.processing"]
       }
@@ -19,7 +22,7 @@
       "package": "org.heatguard.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#58CC02"
+        "backgroundColor": "#0B1016"
       }
     },
     "web": { "bundler": "metro", "name": "HeatGuard", "favicon": "./assets/favicon.png" },
@@ -27,7 +30,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "HeatGuard uses your location to find local heat conditions and nearby cooling places."
+          "locationWhenInUsePermission": "HeatGuard uses your location for local heat conditions, nearby cooling places, and an optional foreground walk/run recording you start."
         }
       ],
       "expo-secure-store",

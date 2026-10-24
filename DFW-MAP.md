@@ -1,8 +1,18 @@
-# Arlington and Dallas relief maps
+# Dallas, Fort Worth and Arlington relief maps
 
 The separate **Entire Dallas County** option extends beyond these city limits, with additional regional paths and Garland shelters. See [DALLAS-COUNTY-MAP.md](DALLAS-COUNTY-MAP.md) for its sources, counts and incomplete amenity coverage.
 
-The Relief Map offers **Entire Arlington** and **Entire Dallas** alongside **Texas District 6** and the new default **Texas District 30** view documented in `TX30-MAP.md`. Each city mode includes published data across the full municipal extent, rather than a small radius around a park. Search parks, trail names, fountain IDs and other mapped places; zoom clusters expand into named markers. City boundaries are purple, park footprints green and mapped trails dashed green. A park footprint does not imply shade.
+Relief Map now starts in **Arlington** and groups entries by **Dallas**, **Fort Worth** and **Arlington**, with **Full city map** and intersecting **District 6/30 portions** beneath each city. District boundaries retain their 119th Congress (2025–2027) vintage. Fort Worth intersects District 6 in this vintage. **All mapped entries** combines all existing city/county/district sources; it preserves source areas outside the three cities and offers secondary full-district views. Dallas County and Nearby remain separate choices. Search parks, trail names, fountain IDs and places; clusters expand into named markers. A park footprint does not imply shade.
+
+## Fort Worth and city/district intersections — October 24, 2026
+
+`scripts/refresh-dfw.ts` fetches the full Census BAS 2026 Fort Worth city boundary, enumerates exact municipal asset IDs, retrieves complete batches, clips points and park polygons to the city, and clips NCTCOG existing off-street trail segments. Required-source failures occur before snapshot replacement. `src/data/city-districts.json` contains actual polygon intersections for the three cities and both existing congressional snapshots. The runtime clips trails to a selected intersection and filters pins by actual polygon containment; city park outlines remain labeled context. No weather location changes when browsing.
+
+Fort Worth adds **360 municipal amenity records: 119 drinking fountains and 241 shelters**, **317 park features** and **255 off-street trail features**. These are published records, not verified working facilities or a complete amenity inventory. Source/date/status remain visible. OSM collection was unavailable, so no additional OSM coverage is claimed. Refresh with `pnpm data:refresh:dfw`; the baseline flag skips OSM while retaining official city sources.
+
+Sources: [Census incorporated places](https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/11), [Fort Worth park assets](https://gisasset.fortworthtexas.gov/ags/rest/services/Assets/Assets_Parks/MapServer) (fountains 10, shelters 25, existing park boundaries 12), [NCTCOG off-street trails](https://geospatial.nctcog.org/map/rest/services/Transportation/BikewayNetwork/FeatureServer/1). Community/library/AC inventory expansion and facility verification remain separate data tasks.
+
+The earlier Arlington/Dallas collection is preserved below; these source counts/dates were not refreshed during the city-navigation change.
 
 | City      | Drinking fountains | Shelters / wooded areas | Municipal park features | Existing public trail segments |
 | --------- | -----------------: | ----------------------: | ----------------------: | -----------------------------: |

@@ -15,15 +15,19 @@ import {
 import { C, rounded, styles } from './src/ui/theme';
 import { RaisedPressable } from './src/ui/RaisedPressable';
 import { BrandMark } from './src/ui/SunBuddy';
+import { AmbientBackdrop, GlassProvider, GlassSurface } from './src/ui/glass';
 import { Home } from './src/screens/Home';
 import { Relief } from './src/screens/Relief';
+import { Journey } from './src/screens/Journey';
 import { Plan } from './src/screens/Plan';
 import { Community } from './src/screens/Community';
 import { Profile } from './src/screens/Profile';
+import { PersonalCheckInSheet } from './src/screens/PersonalCheckIn';
 import { LocationSheet, MethodSheet, SymptomsSheet, WardrobeSheet } from './src/screens/Sheets';
 const NAV: { id: Tab; icon: IconName; en: string; es: string }[] = [
   { id: 'home', icon: 'sun', en: 'Today', es: 'Hoy' },
   { id: 'relief', icon: 'map', en: 'Relief Map', es: 'Mapa de alivio' },
+  { id: 'journey', icon: 'arrow', en: 'Journey', es: 'Recorrido' },
   { id: 'plan', icon: 'calendar', en: 'Forecast', es: 'Pronóstico' },
   { id: 'community', icon: 'people', en: 'Community', es: 'Comunidad' },
   { id: 'profile', icon: 'user', en: 'My plan', es: 'Mi plan' },
@@ -38,16 +42,16 @@ function Brand({ compact = false }: { compact?: boolean }) {
     >
       <BrandMark size={compact ? 34 : 40} />
       <Copy
-        color={C.greenDeep}
+        color={C.ink}
         style={{
           fontFamily: rounded,
-          fontSize: compact ? 22 : 26,
+          fontSize: compact ? 20 : 24,
           lineHeight: compact ? 28 : 32,
-          fontWeight: '900',
-          letterSpacing: -0.8,
+          fontWeight: '600',
+          letterSpacing: -0.7,
         }}
       >
-        heatguard
+        HeatGuard
       </Copy>
     </View>
   );
@@ -67,7 +71,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <LocaleContext.Provider value={{ lang: s.lang, large: s.large }}>
-        <Shell s={s} />
+        <GlassProvider>
+          <Shell s={s} />
+        </GlassProvider>
       </LocaleContext.Provider>
     </SafeAreaProvider>
   );
@@ -77,8 +83,9 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
     { width } = useWindowDimensions(),
     desktop = width >= 900;
   function nav(vertical: boolean) {
+    const NavigationSurface = vertical ? View : GlassSurface;
     return (
-      <View
+      <NavigationSurface
         accessibilityRole="tablist"
         style={
           vertical
@@ -90,7 +97,7 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
                 paddingBottom: 6,
                 paddingHorizontal: 6,
                 gap: 4,
-                borderTopWidth: 2,
+                borderTopWidth: 1,
                 borderColor: C.line,
                 backgroundColor: C.paper,
               }
@@ -106,11 +113,11 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
               accessibilityState={{ selected: on }}
               onPress={() => s.setTab(n.id)}
               style={vertical ? undefined : { flex: 1 }}
-              face={on ? C.blueSoft : C.paper}
-              edge={C.paper}
-              rim={on ? C.blueEdge : C.paper}
+              face={on ? C.blueSoft : 'transparent'}
+              edge="transparent"
+              rim={on ? C.blueEdge : 'transparent'}
               depth={0}
-              radius={14}
+              radius={16}
               contentStyle={
                 vertical
                   ? {
@@ -129,16 +136,15 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
                     }
               }
             >
-              <Icon name={n.icon} size={vertical ? 26 : 24} color={on ? C.blue : C.hare} />
+              <Icon name={n.icon} size={vertical ? 21 : 22} color={on ? C.green : C.hare} />
               <Copy
-                color={on ? C.blueInk : C.muted}
+                color={on ? C.ink : C.muted}
                 style={{
                   fontFamily: rounded,
                   fontSize: vertical ? 15 : 10,
-                  fontWeight: '800',
+                  fontWeight: '500',
                   lineHeight: vertical ? 20 : 13,
-                  letterSpacing: vertical ? 0.6 : 0,
-                  textTransform: vertical ? 'uppercase' : 'none',
+                  letterSpacing: 0,
                   flexShrink: 1,
                   textAlign: vertical ? 'left' : 'center',
                 }}
@@ -148,7 +154,7 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
             </RaisedPressable>
           );
         })}
-      </View>
+      </NavigationSurface>
     );
   }
   const locationButton = (
@@ -157,14 +163,14 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
       accessibilityLabel={t(`Location: ${s.place.name}`, `Ubicación: ${s.place.name}`)}
       onPress={() => s.setSheet('location')}
       style={desktop ? undefined : { flex: 1 }}
-      radius={14}
+      radius={16}
       contentStyle={{ gap: 7, paddingHorizontal: 12, justifyContent: 'flex-start' }}
     >
       <Icon name="pin" size={18} color={C.blue} />
       <Copy
         color={C.ink}
         lines={1}
-        style={{ fontFamily: rounded, fontSize: 14, fontWeight: '800', flexShrink: 1 }}
+        style={{ fontFamily: rounded, fontSize: 13, fontWeight: '500', flexShrink: 1 }}
       >
         {s.place.name}
       </Copy>
@@ -172,14 +178,15 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
   );
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
+      <AmbientBackdrop />
       <View style={{ flex: 1, flexDirection: 'row' }}>
         {desktop ? (
-          <View
+          <GlassSurface
             style={{
-              width: 256,
+              width: 232,
               backgroundColor: C.paper,
-              borderRightWidth: 2,
+              borderRightWidth: 1,
               borderColor: C.line,
               paddingHorizontal: 16,
               paddingVertical: 24,
@@ -190,14 +197,14 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
               <Brand />
             </View>
             {nav(true)}
-          </View>
+          </GlassSurface>
         ) : null}
         <View style={{ flex: 1 }}>
-          <View
+          <GlassSurface
             style={{
               paddingHorizontal: desktop ? 36 : 14,
               paddingVertical: desktop ? 16 : 10,
-              borderBottomWidth: 2,
+              borderBottomWidth: 1,
               borderColor: C.line,
               backgroundColor: C.paper,
               gap: 8,
@@ -224,10 +231,10 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
                 )}
               </Copy>
             ) : null}
-          </View>
+          </GlassSurface>
           <ScrollView
             key={s.tab}
-            style={{ backgroundColor: C.bg }}
+            style={{ backgroundColor: 'transparent' }}
             contentContainerStyle={{
               padding: desktop ? 36 : 16,
               paddingTop: desktop ? 32 : 20,
@@ -244,7 +251,7 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
                 style={{
                   padding: 16,
                   borderRadius: 16,
-                  borderWidth: 2,
+                  borderWidth: 1,
                   borderColor: C.redEdge,
                   backgroundColor: C.redSoft,
                   gap: 10,
@@ -264,6 +271,8 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
               <Home s={s} />
             ) : s.tab === 'relief' ? (
               <Relief s={s} />
+            ) : s.tab === 'journey' ? (
+              <Journey s={s} />
             ) : s.tab === 'plan' ? (
               <Plan s={s} />
             ) : s.tab === 'community' ? (
@@ -306,12 +315,12 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
             padding: desktop ? 30 : 0,
           }}
         >
-          <View
+          <GlassSurface
             style={{
               maxWidth: 760,
               width: '100%',
               maxHeight: desktop ? '95%' : '92%',
-              backgroundColor: C.bg,
+              backgroundColor: C.paper,
               borderRadius: 24,
               borderBottomLeftRadius: desktop ? 24 : 0,
               borderBottomRightRadius: desktop ? 24 : 0,
@@ -337,7 +346,7 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
                   justifyContent: 'space-between',
                   paddingHorizontal: 18,
                   paddingVertical: 12,
-                  borderBottomWidth: 2,
+                  borderBottomWidth: 1,
                   borderColor: C.line,
                 },
               ]}
@@ -366,10 +375,12 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
                 <WardrobeSheet s={s} />
               ) : s.sheet === 'method' ? (
                 <MethodSheet s={s} />
+              ) : s.sheet === 'checkin' ? (
+                <PersonalCheckInSheet s={s} />
               ) : null}
               <Disclaimer place={s.place} />
             </ScrollView>
-          </View>
+          </GlassSurface>
         </View>
       </Modal>
     </SafeAreaView>

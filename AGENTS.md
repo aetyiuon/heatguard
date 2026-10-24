@@ -30,7 +30,10 @@ Use existing TypeScript patterns and format only changed files with `pnpm exec p
 ## Product and UI conventions
 
 - HeatGuard supports iOS, Android, and web. Check platform-specific files when editing shared behavior.
-- Preserve the friendly rounded green/blue/yellow style and original sun character. Reuse `theme.ts`, shared components, and `RaisedPressable` for the press-down effect without layout shifts. Keep keyboard focus, disabled semantics, touch targets, and large-text support.
+- Preserve the charcoal dark theme, restrained mint/blue/amber accents, system typography and simple amber sun mark. The user replaced the earlier bright cartoon style. Reuse `theme.ts`, shared components, and `RaisedPressable` for the subtle press-down effect without layout shifts. Keep keyboard focus, contrast, disabled semantics, touch targets, and large-text support. Keep official NWS HeatRisk colors unchanged; dark basemap styling must not recolor NOAA overlays.
+- Keep the navy/mint translucent-glass treatment in the shared `GlassSurface`/`GlassMaterial` components. Decorative material must stay behind crisp content and must not intercept controls or map gestures. Preserve Reduce Transparency and unsupported-platform fallbacks; web blur is an approximation of the native iOS renderer. Do not replace the palette or restructure screens as part of glass styling.
+- Journey plans and foreground GPS recordings use `journey.ts` and `useJourney.ts`. Keep gaps separate, preserve memory-only location storage and explicit weather-point checks, and never call straight-line sketches routed walking directions. Pulse is context, not a multiplier for outdoor minutes. Read `JOURNEYS.md` and `APPLE-WATCH.md` before changing these paths.
+- City maps are the main categories; TX-6/TX-30 are city intersections or secondary full-source views. Preserve all source records in the combined view and never overwrite full geometry with the last clipped fragment.
 - English is the default; preserve Spanish support and update both language strings when changing localized copy.
 - Preserve real interactive maps: web Leaflet supports mouse-wheel zoom and drag panning; native renderers differ. Map browsing must not silently change the saved heat-check location.
 
