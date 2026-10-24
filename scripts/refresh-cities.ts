@@ -169,7 +169,7 @@ async function osm(boundary: PolygonCoordinates) {
 function cityGridSize(width: number, height: number) {
   return Math.max(2, Math.ceil(Math.max(width, height) / 0.09));
 }
-export async function buildCity(city: CityId): Promise<CityDataset> {
+export async function buildCity(city: Exclude<CityId, 'fort-worth'>): Promise<CityDataset> {
   const fetchedAt = new Date().toISOString();
   const sources: CityDataset['sources'] = [];
   const boundarySource = city === 'arlington' ? arlingtonBoundary : dallasBoundary;
