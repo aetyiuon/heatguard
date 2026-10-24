@@ -1,4 +1,14 @@
-import { Profile, RiskEstimate, Tier, WeatherBundle, WeatherPoint, Workload } from './types';
+import {
+  PersonalCheckIn,
+  Profile,
+  RiskEstimate,
+  Tier,
+  WeatherBundle,
+  WeatherPoint,
+  Workload,
+} from './types';
+import { assessPersonal, personalText } from './personal';
+import { weatherFreshness } from './weather';
 export const toF = (c: number) => (c * 9) / 5 + 32;
 function bounded(n: number, min: number, max: number) {
   return Number.isFinite(n) && n >= min && n <= max;
@@ -109,9 +119,13 @@ export function evaluateRisk(
   p: Profile,
   workload: Workload,
   now = Date.now(),
+  checkIn: PersonalCheckIn | null = null,
 ): RiskEstimate {
   const w = b.current;
   const heatIndex = heatIndexF(toF(w.temperatureC), w.humidity);
+  const heatExposure =
+    heatIndex >= 80 || toF(w.temperatureC) >= 80 || (b.heatRisk ?? 0) >= 1 || b.alerts.length > 0;
+  const personal = assessPersonal(checkIn, p, now, heatExposure);
   const adjusted = adjustedTemperatureF(w, p.shade),
     cycle = nioshCycle(adjusted, workload);
   let tier = heatIndexTier(heatIndex);
@@ -138,7 +152,7 @@ export function evaluateRisk(
     );
   }
   const bmi = p.heightCm && p.weightKg ? p.weightKg / (p.heightCm / 100) ** 2 : undefined;
-  if (bmi !== undefined && bmi >= 30) {
+  if (p.age !== undefined && p.age >= 18 && bmi !== undefined && bmi >= 30) {
     vulnerability++;
     reasons.push('Higher BMI is a caution flag, not a calculated heat-tolerance correction.');
   }
@@ -146,7 +160,7 @@ export function evaluateRisk(
     vulnerability++;
     reasons.push('Full heat acclimatization is not confirmed. Build exposure gradually.');
   }
-  if (p.hydration !== 'adequate') {
+  if (personal.hydration !== 'adequate') {
     vulnerability++;
     reasons.push('Hydration is low or uncertain.');
   }
@@ -159,8 +173,6 @@ export function evaluateRisk(
     reasons.push('Very little air movement; sample schedule assumptions may not hold.');
   }
   // Only move upward. Multiple factors are grouped, never assigned physiological minute penalties.
-  const heatExposure =
-    heatIndex >= 80 || toF(w.temperatureC) >= 80 || (b.heatRisk ?? 0) >= 1 || b.alerts.length > 0;
   if (vulnerability && heatExposure)
     tier = Math.min(3, tier + (vulnerability >= 3 ? 2 : 1)) as Tier;
   if (b.aqi && b.aqi.value >= 101 && p.conditions.includes('respiratory')) {
@@ -169,16 +181,12 @@ export function evaluateRisk(
       'AirNow AQI is unhealthy for sensitive groups, with a respiratory condition reported.',
     );
   }
-  const age = now - Date.parse(w.time),
-    fetchAge = now - Date.parse(b.fetchedAt);
   let stopReason: string | undefined;
-  if (
-    !Number.isFinite(age) ||
-    age > 60 * 60_000 ||
-    age < -10 * 60_000 ||
-    !Number.isFinite(fetchAge) ||
-    fetchAge > 60 * 60_000
-  )
+  if (personal.stop) {
+    stopReason = personalText(personal.stop);
+    // An old check-in requests an update; it does not describe extreme weather.
+    if (personal.stop !== 'update') tier = 3;
+  } else if (weatherFreshness(b, now) !== 'current')
     stopReason = 'Conditions are stale or invalid. Refresh before starting an outdoor session.';
   else if (p.age !== undefined && p.age < 18 && heatExposure)
     stopReason =
@@ -202,6 +210,7 @@ export function evaluateRisk(
   reasons.push(
     'The displayed range and tier caps are conservative HeatGuard planning policy, not validated personal tolerance.',
   );
+  reasons.push(...personal.messages.map((key) => personalText(key)));
   if (workload === 'resting')
     reasons.push(
       'Resting uses a cautious planning proxy; NIOSH work schedules were developed for workers.',
@@ -217,6 +226,6 @@ export function evaluateRisk(
     reasons,
     stopReason,
     sourceSchedule: cycle,
-    modelVersion: '0.1.0',
+    modelVersion: '0.2.0',
   };
 }

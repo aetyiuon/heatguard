@@ -9,6 +9,13 @@ export const SOURCES = {
   medicines:
     'https://www.cdc.gov/heat-health/hcp/clinical-guidance/heat-and-medications-guidance-for-clinicians.html',
   wetBulb: 'https://doi.org/10.1175/JAMC-D-11-0143.1',
+  pulse:
+    'https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse',
+  temperature: 'https://www.nhs.uk/symptoms/fever-in-adults/',
+  healthKit:
+    'https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data',
+  wristTemperature:
+    'https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/applesleepingwristtemperature',
 };
 export const HEAT_RISK = [
   { name: 'Little to none', es: 'Poco o ninguno', color: '#4D9B59' },

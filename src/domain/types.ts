@@ -28,6 +28,19 @@ export const DEFAULT_PROFILE: Profile = {
   shade: false,
   water: false,
 };
+/** Optional, private snapshot. Measurements retain their own acquisition times. */
+export interface PersonalCheckIn {
+  at: number;
+  feeling: 'unknown' | 'well' | 'unwell' | 'emergency';
+  hydration: Profile['hydration'];
+  clothing: 'ordinary' | 'heavy' | 'unknown';
+  heartRate?: { bpm: number; at: number; context: 'rested' | 'active' };
+  temperature?: {
+    c: number;
+    at: number;
+    method: 'oral' | 'ear' | 'forehead' | 'wrist';
+  };
+}
 export interface WeatherPoint {
   time: string;
   temperatureC: number;
@@ -48,6 +61,7 @@ export interface DayForecast {
 }
 export interface WeatherBundle {
   fetchedAt: string;
+  currentSource?: 'modeled' | 'forecast' | 'observation';
   location: Place;
   current: WeatherPoint;
   hourly: WeatherPoint[];
@@ -106,10 +120,10 @@ export interface ReliefTrail {
   regionName?: string;
   localityName?: string;
 }
-export type CityId = 'arlington' | 'dallas';
+export type CityId = 'arlington' | 'dallas' | 'fort-worth';
 export type DistrictId = 'tx06' | 'tx30';
 export type CountyId = 'dallas-county';
-export type MappedAreaId = CityId | DistrictId | CountyId;
+export type MappedAreaId = CityId | DistrictId | CountyId | 'all-dfw';
 export type MapScope = MappedAreaId | 'nearby';
 export type PolygonCoordinates = [number, number][][][];
 export interface MappedPark {
@@ -133,7 +147,7 @@ export interface CoverageRegion {
 }
 export interface CityDataset {
   city: MappedAreaId;
-  areaType?: 'city' | 'congressional-district' | 'county';
+  areaType?: 'city' | 'congressional-district' | 'county' | 'region';
   boundaryLabel?: string;
   boundaryVersion?: string;
   regions?: CoverageRegion[];
