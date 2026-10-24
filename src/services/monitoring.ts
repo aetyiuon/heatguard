@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundTask from 'expo-background-task';
-import { DEFAULT_PROFILE, Place, Profile, Workload, Buddy } from '../domain/types';
+import { DEFAULT_PROFILE, Place, Profile, Workload, Buddy, PersonalCheckIn } from '../domain/types';
 import { evaluateRisk } from '../domain/risk';
 import { fetchWeather } from './api';
 import { readLocal, writeLocal, readPrivate } from './storage';
@@ -34,8 +34,9 @@ if (Platform.OS !== 'web') {
       const settings = await readLocal<MonitorSettings | null>('monitor', null);
       if (!settings?.enabled) return BackgroundTask.BackgroundTaskResult.Success;
       const profile = await readPrivate<Profile>('profile', DEFAULT_PROFILE);
+      const checkIn = await readPrivate<PersonalCheckIn | null>('check-in', null);
       const { data } = await fetchWeather(settings.place, false);
-      const risk = evaluateRisk(data, profile, settings.workload);
+      const risk = evaluateRisk(data, profile, settings.workload, Date.now(), checkIn);
       const previous = await readLocal<{ tier: number; at: number; area: string } | null>(
         'last-alert',
         null,

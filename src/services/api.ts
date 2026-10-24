@@ -49,6 +49,11 @@ export async function fetchRelief(place: Place) {
     throw e;
   }
 }
+/** Route-point checks are deliberately uncached: never persist a precise journey point. */
+export async function fetchJourneyWeather(place: Place): Promise<WeatherBundle> {
+  const data = await api<WeatherBundle>(`/weather?lat=${place.latitude}&lon=${place.longitude}`);
+  return { ...data, location: place };
+}
 export async function anonymousId() {
   let id = await readLocal<string | null>('anonymousId', null);
   if (!id) {

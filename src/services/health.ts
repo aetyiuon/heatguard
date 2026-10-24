@@ -1,5 +1,6 @@
-/** Native integration boundary. HealthKit/Health Connect require dedicated adapters,
- * entitlements, explicit consent, and on-device data validation. No fake pulse data. */
+/** Legacy resting-pulse interface; automatic resting-context detection remains unavailable.
+ * The optional Apple Health / live Watch context feed is implemented in wearable.ios.ts.
+ * Do not treat an exercise reading as a rested measurement or feed it into resting thresholds. */
 export interface HeartRateSample {
   bpm: number;
   at: number;
