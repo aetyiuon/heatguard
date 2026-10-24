@@ -94,6 +94,7 @@ test('normalization handles absolute time and local forecast dates', () => {
     },
   };
   const b = normalizeMeteo(m, p);
+  assert.equal(b.currentSource, 'modeled');
   assert.equal(b.current.time, '2026-10-02T18:00:00.000Z');
   assert.equal(b.daily[0]?.date, '2026-10-02');
   assert.equal(b.current.uv, 5);
