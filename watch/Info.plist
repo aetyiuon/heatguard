@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleDisplayName</key><string>HeatGuard</string>
+  <key>WKApplication</key><true/>
+  <key>WKCompanionAppBundleIdentifier</key><string>org.heatguard.app</string>
+  <key>NSHealthShareUsageDescription</key><string>HeatGuard reads live workout heart rate to show optional pulse context on your paired iPhone.</string>
+  <key>NSHealthUpdateUsageDescription</key><string>HeatGuard starts a workout session to collect live heart rate. The companion discards its workout when you end it.</string>
+  <key>WKBackgroundModes</key><array><string>workout-processing</string></array>
+</dict></plist>
