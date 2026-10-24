@@ -51,6 +51,50 @@ export function nearestAc(pins: ReliefPin[], place: Place) {
     place,
   )[0];
 }
-export function directionsUrl(p: ReliefPin) {
-  return `https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}&travelmode=walking`;
+export const COOLING_SEARCH_METERS = 10000;
+export type CoolingSearchResult =
+  | { status: 'found'; pin: NonNullable<ReturnType<typeof nearestAc>> }
+  | { status: 'not-found' | 'unavailable' };
+
+/** A candidate in available records, never a claim that AC or today's access is verified. */
+export async function findCoolingPlace({
+  place,
+  cachedPins,
+  localPins,
+  loadDownloadedPins,
+  loadNearbyPins,
+}: {
+  place: Place;
+  cachedPins: ReliefPin[];
+  localPins: ReliefPin[];
+  loadDownloadedPins: () => Promise<ReliefPin[]>;
+  loadNearbyPins: () => Promise<ReliefPin[]>;
+}): Promise<CoolingSearchResult> {
+  let downloaded: ReliefPin[] = [];
+  try {
+    downloaded = await loadDownloadedPins();
+  } catch {
+    // A missing download must not block saved candidates or the live fallback.
+  }
+  const pick = (remote: ReliefPin[]) =>
+    nearestAc(
+      mergePins(remote, localPins).filter(
+        (p) => pickedCoordinates(p) && distanceMeters(place, p) <= COOLING_SEARCH_METERS,
+      ),
+      place,
+    );
+  const saved = [...downloaded, ...cachedPins];
+  const candidate = pick(saved);
+  if (candidate) return { status: 'found', pin: candidate };
+  try {
+    const nearby = await loadNearbyPins();
+    const pin = pick([...saved, ...nearby]);
+    return pin ? { status: 'found', pin } : { status: 'not-found' };
+  } catch {
+    return { status: 'unavailable' };
+  }
+}
+
+export function directionsUrl(p: ReliefPin, origin?: Place) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}&travelmode=walking${origin ? `&origin=${origin.latitude},${origin.longitude}` : ''}`;
 }
