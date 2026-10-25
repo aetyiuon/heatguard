@@ -60,7 +60,20 @@ const SCHEMA = {
 };
 const INSTRUCTION = `You explain public city weather for HeatGuard, an adults-only US heat-awareness app.
 Use only supplied public data. Write exactly two short summary sentences in the requested language. Describe weather qualitatively, without digits, durations, exposure limits, personal health advice, diagnosis, safety assurances or risk ratings. In the summary do not use the words safe, safely, unsafe, hours, minutes, seguro, segura, horas or minutos. Never say it is safe to stay outside or to skip cooling. Do not invent amenities, availability, forecasts, route geometry or official alerts. Do not mention personal data: none is supplied. Choose two to four distinct action IDs from the schema, in a useful order for this weather. Actions are an app checklist, not medical advice. Return only the schema JSON. Do not use tools or external sources.`;
-const PERSONAL_INSTRUCTION = `This is an optional personal planning explanation, not a medical assessment or exposure decision. Consider every supplied field, noting missing values rather than inventing them. Use public weather and user-entered planning context only. Mention the most relevant preparation factors qualitatively. Never interpret measurements as diagnoses, determine hydration from pulse, infer metabolism/core temperature/heat tolerance from body size or wrist readings, give medication/dose advice, or increase/assign outdoor time. Sex is context only, not a reason for different time limits. Workload is an activity category, not measured metabolism. Old readings are historical. Do not repeat exact measurements, condition/medication names, or identifiers in output. Write two brief sentences in the requested language about weather and practical preparation only. The fixed action checklist is informational. This is not clinician care; health decisions remain outside this AI response.`;
+const PERSONAL_INSTRUCTION = `You explain optional personal preparation context for HeatGuard, an adults-only US wellness app. This is not medical assessment, clinical care or a decision about exposure. Review EVERY supplied profile/check-in field alongside the supplied public city weather. Missing data stays unknown. False water/shade flags mean not confirmed.
+Write exactly two brief sentences in the requested language, addressed directly to the user (English your/you, Spanish tu/tus). The first MUST discuss the user's reported activity/workload and hydration, water, shade or clothing in relation to the weather. The second MUST explain another reported preparation factor or a limitation of the inputs. Do not return a generic city-weather summary. Refer to condition/medication categories generically, never repeat their specific names. Never repeat exact measurements or any numbers.
+Activity is a workload proxy, not measured metabolism. Body size, sex, fitness, normal pulse and temperature cannot establish heat tolerance or justify extra exposure. Wrist temperature is not core temperature. Old readings are historical. Do not interpret measurements or conditions clinically, diagnose, assess physiology, recommend medication/fluid changes, assign exposure times, risk ratings or give clearance for activity. Do not say comfortable, suitable, tolerable, breathable, safe, safely, unsafe, hours, minutes, cómodo, apto, seguro, segura, horas or minutos. Do not imply the user can tolerate current conditions or that cooling is unnecessary. Do not infer absent conditions from unselected categories.
+Choose two to four distinct allowed action IDs to prioritize a fixed planning checklist. Do not invent facilities, forecasts, facts or routes. No external tools or sources. Return only the required JSON schema. AI is fallible; local stop warnings and the existing local calculation retain all authority.`;
+function personalSummaryAllowed(summary: string) {
+  return (
+    !/\b(comfort\w*|suitab\w*|tolerab\w*|breathab\w*|c[oó]mod\w*|apt[oa]s?)\b/i.test(summary) &&
+    /\b(you|your|tu|tus|usted|sus)\b/i.test(summary) &&
+    /(activ|workload|exert|hydr|water|shade|cloth|pulse|reading|fitness|acclimat|hidrat|esfuer|agua|sombra|ropa|pulso|lectura)/i.test(
+      summary,
+    )
+  );
+}
+
 const TTL = 10 * 60_000;
 function json(data: unknown, status = 200) {
   return Response.json(data, {
@@ -232,14 +245,7 @@ export function createAiHandler(
                 messages: [
                   {
                     role: 'system',
-                    content: input.personal
-                      ? INSTRUCTION.replace(
-                          'Use only supplied public data.',
-                          'Use only supplied public weather and reviewed optional wellness inputs.',
-                        ).replace('Do not mention personal data: none is supplied.', '') +
-                        '\n' +
-                        PERSONAL_INSTRUCTION
-                      : INSTRUCTION,
+                    content: input.personal ? PERSONAL_INSTRUCTION : INSTRUCTION,
                   },
                   { role: 'user', content: JSON.stringify(modelData) },
                 ],
@@ -297,7 +303,8 @@ export function createAiHandler(
           } catch {
             /* rejected below */
           }
-          if (!parsed) throw new AiFailure('invalid-response', 502);
+          if (!parsed || (input.personal && !personalSummaryAllowed(parsed.summary)))
+            throw new AiFailure('invalid-response', 502);
           if (weatherFreshness(weather, now()) !== 'current')
             throw new AiFailure('weather-unavailable', 503);
           const generatedAt = now();
