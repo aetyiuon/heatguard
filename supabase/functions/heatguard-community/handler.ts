@@ -35,7 +35,8 @@ export function communityHandler(settings: CommunitySettings, transport: typeof 
       signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) throw new Error('Database unavailable');
-    return response.status === 204 ? undefined : response.json();
+    const text = await response.text();
+    return text ? JSON.parse(text) : undefined;
   }
   return async function (request: Request): Promise<Response> {
     if (!settings.secret || !settings.publishable.includes(request.headers.get('apikey') ?? ''))
