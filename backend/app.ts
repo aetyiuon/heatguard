@@ -11,6 +11,7 @@ export interface Env extends WeatherEnv {
   ALLOWED_ORIGINS?: string;
   MUNICIPAL_GEOJSON_URL?: string;
   COMMUNITY_SALT?: string;
+  BUNDLED_CITY?: typeof bundledCity;
   COMMUNITY_HANDLER?: (request: Request) => Promise<Response>;
   DB?: { prepare(sql: string): Statement; batch(statements: Statement[]): Promise<unknown> };
   RATE_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
@@ -225,11 +226,11 @@ export async function handleRequest(request: Request, env: Env = {}): Promise<Re
         if (scopeCount > 1)
           response = json({ error: 'Choose exactly one city, county, or district scope.' }, 400);
         else if (county === 'dallas')
-          response = json(await bundledCity('dallas-county'), 200, true);
+          response = json(await (env.BUNDLED_CITY ?? bundledCity)('dallas-county'), 200, true);
         else if (county !== null)
           response = json({ error: 'Provide a supported county: dallas.' }, 400);
         else if ((district === 'tx06' || district === 'tx30') && city === null)
-          response = json(await bundledCity(district), 200, true);
+          response = json(await (env.BUNDLED_CITY ?? bundledCity)(district), 200, true);
         else if (district !== null)
           response = json(
             { error: 'Provide district=tx06 or district=tx30 without a city parameter.' },
@@ -241,7 +242,7 @@ export async function handleRequest(request: Request, env: Env = {}): Promise<Re
           city === 'fort-worth' ||
           city === 'all-dfw'
         )
-          response = json(await bundledCity(city), 200, true);
+          response = json(await (env.BUNDLED_CITY ?? bundledCity)(city), 200, true);
         else if (city !== null)
           response = json(
             { error: 'Provide a supported city: arlington, dallas, fort-worth or all-dfw.' },

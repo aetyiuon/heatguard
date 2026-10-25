@@ -1,3 +1,6 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { bundledCity } from '../src/domain/cities';
 import { handleRequest, Env } from './app';
 
 /** Same-origin Vercel adapter. Never forward client-supplied platform identity headers. */
@@ -21,6 +24,11 @@ export async function hostedRequest(
   );
   const env: Env = {
     ALLOWED_ORIGINS: incoming.origin,
+    // Node reads the traced JSON files; Expo keeps its lazy import bundles.
+    BUNDLED_CITY: (city) =>
+      bundledCity(city, async (name) =>
+        JSON.parse(await readFile(join(process.cwd(), 'src', 'data', `${name}.json`), 'utf8')),
+      ),
     NWS_USER_AGENT: settings.NWS_USER_AGENT ?? 'HeatGuard (https://github.com/aetyiuon/heatguard)',
     AIRNOW_API_KEY: settings.AIRNOW_API_KEY,
     MUNICIPAL_GEOJSON_URL: settings.MUNICIPAL_GEOJSON_URL,
