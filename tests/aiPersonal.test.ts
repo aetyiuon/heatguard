@@ -205,3 +205,30 @@ test('personal stop rules block cloud generation before private factors reach pr
   }
   assert.equal(calls, 0);
 });
+
+test('personal mode rejects generic weather and comfort assurances instead of calling them personalized', async () => {
+  for (const summary of [
+    'The city is cloudy and breezy. Humidity is low.',
+    'Your light activity should feel comfortable in the breeze. Bring water.',
+  ]) {
+    const handler = createAiHandler({
+      now: () => time,
+      weather: async () => weather(),
+      fetch: async () =>
+        Response.json({
+          model: AI_MODEL,
+          choices: [
+            {
+              finish_reason: 'stop',
+              message: {
+                content: JSON.stringify({ summary, actions: ['bring-water', 'choose-shade'] }),
+              },
+            },
+          ],
+        }),
+    });
+    const result = await handler(request(payload), env);
+    assert.equal(result.status, 502);
+    assert.equal((await result.json()).code, 'invalid-response');
+  }
+});
