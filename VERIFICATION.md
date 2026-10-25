@@ -1,5 +1,16 @@
 # Verification record
 
+## Persistent web hosting - October 25, 2026
+
+- Production: https://heatguard-tan.vercel.app/ in Vercel project `heatguard` (Hobby), tracking `codex/deploy-live`. Based on Claude UI commit `bcaa154fbec49312429a5a5dc5c74d4388054fa8`; hosting review is PR #2, targeting `claude/ui-redesign`. `main` remains the older app. See DEPLOYMENT.md for contributor update instructions and separate Supabase deployments.
+- TypeScript passed. All **143 automated tests** passed, including cloud consent/privacy checks and the Node city loader. After preserving the one-argument city callback, the 17 affected hosted/city/DFW tests passed again and the final Expo production web export passed. Native binaries and Swift compilation are not covered by a web export.
+- Anonymous HTTPS requests to the stable production URL returned 200 for the app, API health (`community: true`), live modeled weather and the community feed. Invalid coordinates returned 400, another Origin returned 403, and a community write without sharing consent returned 400. A synthetic consented report passed Vercel -> Supabase -> feed with 201/200, exposed only coarse coordinates and no actor ID, and was deleted afterward.
+- Production city API checks returned 200: Arlington 355 pins / 103 parks / 99 trails; Dallas 1,229 / 404 / 168; Fort Worth 360 / 317 / 255; combined 1,976 / 1,163 / 1,231. The combined JSON payload was about 3.64 MB. These are dated published records, not verified open/working facilities. The server reads traced JSON; browser/native retain lazy Metro bundles.
+- Browser Today showed real modeled current readings and acquisition age. Journey loaded a published 2.14 km Sublett Creek trail section, estimated 26 moving minutes, flagged missing nearby shelter/AC and fetched three actual weather samples. Browser Apple Watch connection stayed explicitly unavailable. No user GPS, private health data or contact message was used.
+- Dedicated Supabase project `ljoluomippttmxosfscz` in AgoraAI is healthy. Four community tables have RLS enabled, no direct anon/authenticated table grants, and service-backend access only. The Edge Function authenticates its API key, validates consent/payloads, hashes actor identifiers, enforces database-backed request/write limits and filters/removes expired data on feed reads. Modern publishable configuration is stored server-side on Vercel; administrator credentials remain injected inside Supabase.
+- Profiles, contacts, biometrics and recordings retain their existing local/memory behavior. No new account/profile sync is implemented. AirNow is unavailable without its optional server key. Physical iPhone/Watch, native background behavior, assistive technology and signed builds still need device acceptance. Vercel's instance-local general API cache/rate limit is not a global coordinated limit; community limits use Postgres.
+
+
 Initial scaffold checked on Windows on October 2, 2026 (America/Chicago). The city and district expansions were checked October 20, 2026 as recorded below. This is a scaffold acceptance record, not medical validation or an app-store release certification.
 
 ## Dynamic sky behind the glass — October 24, 2026 (branch `claude/ui-redesign`)

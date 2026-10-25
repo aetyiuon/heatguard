@@ -1,10 +1,14 @@
 # Live web hosting
 
+Live app: https://heatguard-tan.vercel.app/
+
+Vercel project: `heatguard` in Andy Tran's projects (Hobby). Production follows **`codex/deploy-live`**. The deployment branch starts from Claude UI commit `bcaa154fbec49312429a5a5dc5c74d4388054fa8`; `main` still holds an older app version. Hosting changes are reviewed in [PR #2](https://github.com/aetyiuon/heatguard/pull/2).
+
 The Vercel deployment serves the Expo web export and the existing weather/relief API at the same HTTPS origin. Native iPhone, Android and Watch releases remain separate builds.
 
 ## Vercel
 
-Import `aetyiuon/heatguard`, select the deployment branch, choose Other for framework, and use Node 24. `vercel.json` pins the package manager, runs the Expo export and publishes `dist`. It builds the browser with `EXPO_PUBLIC_API_URL=/api`; no localhost API address is embedded in the live build. `/api/*` is routed to the Node function in `api/index.ts`.
+Import `aetyiuon/heatguard`, select the deployment branch, choose Other for framework, and use Node 24. `vercel.json` pins the package manager, runs the Expo export and publishes `dist`. It builds the browser with `EXPO_PUBLIC_API_URL=/api`; no localhost API address is embedded in the live build. `/api/*` is routed to the Node function in `api/index.ts`. The Node adapter reads traced city JSON files from `src/data`; Expo retains lazy imports for browser/native bundles. Keep these loaders separate because Metro does not accept Node JSON import attributes.
 
 The adapter retains request validation, data provenance, original acquisition timestamps and missing-data behavior. Browser API requests must come from the site's own origin. The optional AirNow key remains a server-only `AIRNOW_API_KEY`; without it the UI explicitly marks AQI unavailable. Native clients keep using an explicitly configured HTTPS API URL. In-process upstream caching and the fallback rate limiter are per function instance, not a globally coordinated abuse limit.
 
@@ -12,7 +16,7 @@ Verify `/api/health`, `/api/weather?lat=32.7902&lon=-97.116`, the Today screen, 
 
 ## Updates
 
-Push app changes to a feature branch and inspect the Vercel preview. Merge approved changes into the configured production branch to update the stable URL automatically. Keep secrets in Vercel's encrypted environment settings, never in source or `EXPO_PUBLIC_*` values.
+For Codex or Claude changes, create a feature branch from `codex/deploy-live`, inspect the Vercel preview, then merge approved changes into `codex/deploy-live` to update the stable URL automatically. Changes made only on `main` or `claude/ui-redesign` do not update production. Keep `vercel.json`, `api/`, the server adapter and the current lockfile when changing the UI. Supabase schema/function changes require a separate migration/function deployment; a Vercel Git push does not deploy them. Keep secrets in Vercel's encrypted environment settings, never in source or `EXPO_PUBLIC_*` values.
 
 ## Supabase community storage
 
