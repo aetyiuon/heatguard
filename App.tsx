@@ -15,7 +15,8 @@ import {
 import { C, rounded, styles } from './src/ui/theme';
 import { RaisedPressable } from './src/ui/RaisedPressable';
 import { BrandMark } from './src/ui/SunBuddy';
-import { AmbientBackdrop, GlassProvider, GlassSurface } from './src/ui/glass';
+import { GlassProvider, GlassSurface } from './src/ui/glass';
+import { SkyBackdrop } from './src/ui/SkyBackdrop';
 import { Home } from './src/screens/Home';
 import { Relief } from './src/screens/Relief';
 import { Journey } from './src/screens/Journey';
@@ -179,7 +180,7 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar style="light" />
-      <AmbientBackdrop />
+      <SkyBackdrop scene={s.sky} />
       <View style={{ flex: 1, flexDirection: 'row' }}>
         {desktop ? (
           <GlassSurface

@@ -5,6 +5,7 @@ import {
   WeatherBundle,
   WeatherPoint,
 } from '../src/domain/types';
+import { conditionFromForecastText, conditionFromWmo } from '../src/domain/sky';
 import { upstream } from './upstream';
 export interface WeatherEnv {
   NWS_USER_AGENT?: string;
@@ -68,6 +69,22 @@ export async function heatRiskForecast(
 function finite(n: unknown) {
   return typeof n === 'number' && Number.isFinite(n);
 }
+export function nwsHourly(periods: any[]): WeatherPoint[] {
+  return periods
+    .filter((p: any) => finite(p.relativeHumidity?.value))
+    .map((p: any) => {
+      const condition = conditionFromForecastText(p.shortForecast);
+      return {
+        time: p.startTime,
+        temperatureC: p.temperatureUnit === 'F' ? ((p.temperature - 32) * 5) / 9 : p.temperature,
+        humidity: p.relativeHumidity.value,
+        windMs: Math.max(...(p.windSpeed.match(/[\d.]+/g) ?? ['0']).map(Number)) * 0.44704,
+        isDay: p.isDaytime,
+        // Omitted rather than undefined so a merge keeps a matched Open-Meteo sky description.
+        ...(condition ? { condition } : {}),
+      };
+    });
+}
 export function normalizeMeteo(m: any, place: Place): WeatherBundle {
   if (
     !m.current ||
@@ -85,19 +102,22 @@ export function normalizeMeteo(m: any, place: Place): WeatherBundle {
     uv: m.hourly.uv_index?.[i] ?? undefined,
     cloudCover: m.hourly.cloud_cover?.[i] ?? undefined,
     isDay: (m.hourly.is_day?.[i] ?? 0) === 1,
+    condition: conditionFromWmo(m.hourly.weather_code?.[i]),
   });
   const idx = Math.max(
     0,
     m.hourly.time.findLastIndex((t: number) => t <= m.current.time),
   );
+  const hour = point(idx);
   const current: WeatherPoint = {
-    ...point(idx),
+    ...hour,
     time: new Date(m.current.time * 1000).toISOString(),
     temperatureC: m.current.temperature_2m,
     humidity: m.current.relative_humidity_2m,
     windMs: m.current.wind_speed_10m,
     cloudCover: m.current.cloud_cover,
     isDay: m.current.is_day === 1,
+    condition: conditionFromWmo(m.current.weather_code) ?? hour.condition,
   };
   const dateFormat = new Intl.DateTimeFormat('en-CA', {
     timeZone: m.timezone,
@@ -115,6 +135,7 @@ export function normalizeMeteo(m: any, place: Place): WeatherBundle {
     fetchedAt: new Date().toISOString(),
     currentSource: 'modeled',
     location: place,
+    timezone: typeof m.timezone === 'string' ? m.timezone : undefined,
     current,
     hourly: m.hourly.time
       .map((_: unknown, i: number) => point(i))
@@ -129,9 +150,9 @@ export async function getWeather(place: Place, env: WeatherEnv): Promise<Weather
   const base = new URLSearchParams({
     latitude: String(place.latitude),
     longitude: String(place.longitude),
-    current: 'temperature_2m,relative_humidity_2m,wind_speed_10m,cloud_cover,is_day',
+    current: 'temperature_2m,relative_humidity_2m,wind_speed_10m,cloud_cover,is_day,weather_code',
     hourly:
-      'temperature_2m,relative_humidity_2m,wind_speed_10m,shortwave_radiation,uv_index,cloud_cover,is_day',
+      'temperature_2m,relative_humidity_2m,wind_speed_10m,shortwave_radiation,uv_index,cloud_cover,is_day,weather_code',
     daily: 'temperature_2m_max,temperature_2m_min,uv_index_max',
     wind_speed_unit: 'ms',
     timezone: 'auto',
@@ -165,7 +186,8 @@ export async function getWeather(place: Place, env: WeatherEnv): Promise<Weather
         nwsHeaders,
       ),
     ]);
-    return { hourly, forecast, alerts };
+    const timeZone: unknown = points.properties.timeZone;
+    return { hourly, forecast, alerts, timeZone };
   };
   const [meteo, nwsResult, heatRisk, airnow] = await Promise.allSettled([
     upstream(`https://api.open-meteo.com/v1/forecast?${base}`, 300),
@@ -181,16 +203,7 @@ export async function getWeather(place: Place, env: WeatherEnv): Promise<Weather
   let bundle: WeatherBundle;
   if (meteo.status === 'fulfilled') bundle = normalizeMeteo(meteo.value, place);
   else if (nwsResult.status === 'fulfilled' && nwsResult.value?.hourly.status === 'fulfilled') {
-    const periods = nwsResult.value.hourly.value.properties.periods;
-    const hourly: WeatherPoint[] = periods
-      .filter((p: any) => finite(p.relativeHumidity?.value))
-      .map((p: any) => ({
-        time: p.startTime,
-        temperatureC: p.temperatureUnit === 'F' ? ((p.temperature - 32) * 5) / 9 : p.temperature,
-        humidity: p.relativeHumidity.value,
-        windMs: Math.max(...(p.windSpeed.match(/[\d.]+/g) ?? ['0']).map(Number)) * 0.44704,
-        isDay: p.isDaytime,
-      }));
+    const hourly = nwsHourly(nwsResult.value.hourly.value.properties.periods);
     if (!hourly.length) throw new Error('No usable current conditions');
     bundle = {
       fetchedAt: new Date().toISOString(),
@@ -207,16 +220,9 @@ export async function getWeather(place: Place, env: WeatherEnv): Promise<Weather
     throw new Error('Weather providers unavailable. Offline symptom guidance is still available.');
   if (nwsResult.status === 'fulfilled' && nwsResult.value) {
     const n = nwsResult.value;
+    if (!bundle.timezone && typeof n.timeZone === 'string') bundle.timezone = n.timeZone;
     if (n.hourly.status === 'fulfilled') {
-      const hourly = n.hourly.value.properties.periods
-        .filter((p: any) => finite(p.relativeHumidity?.value))
-        .map((p: any) => ({
-          time: p.startTime,
-          temperatureC: p.temperatureUnit === 'F' ? ((p.temperature - 32) * 5) / 9 : p.temperature,
-          humidity: p.relativeHumidity.value,
-          windMs: Math.max(...(p.windSpeed.match(/[\d.]+/g) ?? ['0']).map(Number)) * 0.44704,
-          isDay: p.isDaytime,
-        }));
+      const hourly = nwsHourly(n.hourly.value.properties.periods);
       // Keep matched radiation/UV supplemental fields without claiming they are NWS measurements.
       bundle.hourly = hourly.map((p: WeatherPoint) => ({
         ...bundle.hourly.find((h) => Math.abs(Date.parse(h.time) - Date.parse(p.time)) < 1800000),

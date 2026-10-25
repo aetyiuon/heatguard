@@ -41,6 +41,9 @@ export interface PersonalCheckIn {
     method: 'oral' | 'ear' | 'forehead' | 'wrist';
   };
 }
+/** Provider sky description normalized for the decorative backdrop; absent when not reported. */
+export type SkyCondition =
+  'clear' | 'partly-cloudy' | 'cloudy' | 'fog' | 'drizzle' | 'rain' | 'snow' | 'storm';
 export interface WeatherPoint {
   time: string;
   temperatureC: number;
@@ -50,6 +53,7 @@ export interface WeatherPoint {
   cloudCover?: number;
   isDay?: boolean;
   uv?: number;
+  condition?: SkyCondition;
 }
 export interface DayForecast {
   date: string;
@@ -63,6 +67,8 @@ export interface WeatherBundle {
   fetchedAt: string;
   currentSource?: 'modeled' | 'forecast' | 'observation';
   location: Place;
+  /** IANA zone of the checked place, when the provider reports one. */
+  timezone?: string;
   current: WeatherPoint;
   hourly: WeatherPoint[];
   daily: DayForecast[];

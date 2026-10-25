@@ -8,7 +8,6 @@ import {
   ViewProps,
   ViewStyle,
 } from 'react-native';
-import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { C } from './theme';
 import GlassMaterial from './GlassMaterial';
 
@@ -70,32 +69,4 @@ export function GlassSurface({
   );
 }
 
-/** Stationary, subtle blue/mint light under the glass. Does not intercept maps or controls. */
-export function AmbientBackdrop() {
-  const reduced = useReducedTransparency();
-  if (reduced) return null;
-  return (
-    <View pointerEvents="none" accessible={false} style={StyleSheet.absoluteFill}>
-      <Svg
-        width="100%"
-        height="100%"
-        viewBox="0 0 1200 1000"
-        preserveAspectRatio="xMidYMid slice"
-        aria-hidden
-      >
-        <Defs>
-          <RadialGradient id="hgGlassBlue" cx="92%" cy="8%" r="75%">
-            <Stop offset="0" stopColor={C.blue} stopOpacity="0.30" />
-            <Stop offset="1" stopColor={C.blue} stopOpacity="0" />
-          </RadialGradient>
-          <RadialGradient id="hgGlassMint" cx="14%" cy="84%" r="64%">
-            <Stop offset="0" stopColor={C.green} stopOpacity="0.18" />
-            <Stop offset="1" stopColor={C.green} stopOpacity="0" />
-          </RadialGradient>
-        </Defs>
-        <Rect width="1200" height="1000" fill="url(#hgGlassBlue)" />
-        <Rect width="1200" height="1000" fill="url(#hgGlassMint)" />
-      </Svg>
-    </View>
-  );
-}
+// The light under the glass is the animated sky in SkyBackdrop.tsx.

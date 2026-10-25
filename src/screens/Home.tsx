@@ -22,10 +22,70 @@ import {
   weatherFreshness,
   WEATHER_REFRESH_MS,
 } from '../domain/weather';
-import { Workload } from '../domain/types';
+import { SkyCondition, Workload } from '../domain/types';
+import { SkyScene } from '../domain/sky';
 import { PersonalSummary } from './PersonalCheckIn';
 import { translatePersonalReason } from '../domain/personal';
 import { GlassSurface } from '../ui/glass';
+const SKY_LABELS: Record<SkyCondition, [string, string]> = {
+  clear: ['Clear skies', 'Cielo despejado'],
+  'partly-cloudy': ['Partly cloudy', 'Parcialmente nublado'],
+  cloudy: ['Cloudy', 'Nublado'],
+  fog: ['Fog', 'Niebla'],
+  drizzle: ['Drizzle', 'Llovizna'],
+  rain: ['Rain', 'Lluvia'],
+  snow: ['Snow', 'Nieve'],
+  storm: ['Thunderstorms', 'Tormentas eléctricas'],
+};
+function skyIcon(sky: SkyScene): IconName {
+  return sky.condition === 'storm'
+    ? 'storm'
+    : sky.condition === 'rain' || sky.condition === 'drizzle'
+      ? 'rain'
+      : sky.condition === 'snow'
+        ? 'snow'
+        : sky.condition === 'cloudy' || sky.condition === 'fog'
+          ? 'cloud'
+          : sky.sun
+            ? 'sun'
+            : 'moon';
+}
+/** Greeting for the checked place's local time, plus the sky the backdrop is drawing. */
+function SkyStatus({ sky }: { sky: SkyScene }) {
+  const { t } = useLocale();
+  const greeting =
+    sky.period === 'morning'
+      ? t('Good morning', 'Buenos días')
+      : sky.period === 'afternoon'
+        ? t('Good afternoon', 'Buenas tardes')
+        : t('Good evening', 'Buenas noches');
+  const label = sky.condition ? t(...SKY_LABELS[sky.condition]) : undefined;
+  const icon = skyIcon(sky);
+  return (
+    <View
+      accessible
+      accessibilityLabel={label ? `${greeting}. ${label}.` : `${greeting}.`}
+      style={{
+        alignSelf: 'flex-start',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 7,
+        marginBottom: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: C.line,
+        backgroundColor: C.soft,
+      }}
+    >
+      <Icon name={icon} size={16} color={icon === 'sun' ? C.orange : C.blueInk} />
+      <Copy color={C.ink} style={{ fontFamily: rounded, fontSize: 13, lineHeight: 18 }}>
+        {label ? `${greeting} · ${label}` : greeting}
+      </Copy>
+    </View>
+  );
+}
 export function Home({ s }: { s: HeatGuardState }) {
   const [weatherDetails, setWeatherDetails] = useState(false);
   const { t, lang } = useLocale(),
@@ -63,6 +123,7 @@ export function Home({ s }: { s: HeatGuardState }) {
     <View style={{ gap: 20 }}>
       <View style={[styles.row, { alignItems: 'center', gap: 8 }]}>
         <View style={{ flex: 1, gap: 6 }}>
+          <SkyStatus sky={s.sky} />
           <Copy kind="label">{t('TODAY / OVERVIEW', 'HOY / RESUMEN')}</Copy>
           <Copy kind="title">{t('Your heat outlook.', 'Tu panorama del calor.')}</Copy>
           <Copy>
@@ -104,7 +165,14 @@ export function Home({ s }: { s: HeatGuardState }) {
           ]}
         >
           <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            {!narrow ? <IconBadge name="sun" color={C.orange} bg={C.soft} size={52} /> : null}
+            {!narrow ? (
+              <IconBadge
+                name={skyIcon(s.sky)}
+                color={skyIcon(s.sky) === 'sun' ? C.orange : C.blueInk}
+                bg={C.soft}
+                size={52}
+              />
+            ) : null}
             <View>
               <Copy
                 style={{

@@ -17,6 +17,7 @@ import {
   Workload,
 } from '../domain/types';
 import { evaluateRisk } from '../domain/risk';
+import { skyScene } from '../domain/sky';
 import { validCheckIn } from '../domain/personal';
 import {
   createWeatherRefresher,
@@ -181,6 +182,11 @@ export function useHeatGuard() {
   const risk = useMemo(
     () => (weather ? evaluateRisk(weather, profile, workload, now, checkIn) : null),
     [weather, profile, workload, now, checkIn],
+  );
+  // Decorative backdrop for the checked place; recomputed at most once a minute.
+  const sky = useMemo(
+    () => skyScene(place, weather, now),
+    [place.latitude, place.longitude, weather, Math.floor(now / 60000)],
   );
   useEffect(() => {
     if (!weatherReady) return;
@@ -577,6 +583,7 @@ export function useHeatGuard() {
     weatherFailed,
     lastWeatherCheckAt,
     risk,
+    sky,
     pins: allPins,
     mapCached,
     mapWarnings,

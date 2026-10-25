@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { handleRequest, parsePlace } from '../backend/app';
-import { normalizeMeteo, parseHeatRisk } from '../backend/weather';
+import { normalizeMeteo, nwsHourly, parseHeatRisk } from '../backend/weather';
 import { upstream } from '../backend/upstream';
 test('coordinate validation rejects missing, nonnumeric and out-of-range data', () => {
   for (const q of ['', 'lat=&lon=0', 'lat=nope&lon=0', 'lat=91&lon=0', 'lat=0&lon=-181'])
@@ -98,6 +98,35 @@ test('normalization handles absolute time and local forecast dates', () => {
   assert.equal(b.current.time, '2026-10-02T18:00:00.000Z');
   assert.equal(b.daily[0]?.date, '2026-10-02');
   assert.equal(b.current.uv, 5);
+  assert.equal(b.timezone, 'America/Chicago');
+  assert.equal(b.current.condition, undefined);
+  const coded = normalizeMeteo(
+    {
+      ...m,
+      current: { ...m.current, weather_code: 63 },
+      hourly: { ...m.hourly, weather_code: [3] },
+    },
+    p,
+  );
+  assert.equal(coded.current.condition, 'rain');
+  assert.equal(coded.hourly[0]?.condition, 'cloudy');
+});
+test('NWS hourly sky wording is normalized and omitted when unrecognized', () => {
+  const period = {
+    startTime: '2026-10-02T13:00:00-05:00',
+    temperature: 86,
+    temperatureUnit: 'F',
+    relativeHumidity: { value: 40 },
+    windSpeed: '5 to 10 mph',
+    isDaytime: true,
+  };
+  const [rain, unknown] = nwsHourly([
+    { ...period, shortForecast: 'Rain Showers Likely' },
+    { ...period, shortForecast: 'Haze' },
+  ]);
+  assert.equal(rain?.condition, 'rain');
+  // A missing key, not `condition: undefined`, lets a merge keep the Open-Meteo description.
+  assert.equal(unknown && 'condition' in unknown, false);
 });
 test('missing weather inputs never turn into zero-valued conditions', () => {
   assert.throws(() =>

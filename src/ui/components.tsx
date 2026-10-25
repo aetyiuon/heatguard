@@ -82,7 +82,11 @@ export type IconName =
   | 'refresh'
   | 'close'
   | 'play'
-  | 'phone';
+  | 'phone'
+  | 'moon'
+  | 'cloud'
+  | 'rain'
+  | 'storm';
 const paths: Partial<Record<IconName, string>> = {
   shield: 'M12 3 3 7v5c0 5 9 9 9 9s9-4 9-9V7z M8 12l3 3 5-6',
   home: 'M3 10 12 3l9 7v11h-6v-7H9v7H3z',
@@ -106,6 +110,10 @@ const paths: Partial<Record<IconName, string>> = {
   close: 'M6 6l12 12 M6 18 18 6',
   play: 'm7 3 14 9-14 9z',
   phone: 'M6 3H3c-2 12 6 20 18 18v-3l-5-3-3 3-7-7 3-3z',
+  moon: 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z',
+  cloud: 'M7 18h10a4 4 0 0 0 .6-8A6 6 0 0 0 6.2 9.5 4.3 4.3 0 0 0 7 18z',
+  rain: 'M7 14h10a4 4 0 0 0 .6-8A6 6 0 0 0 6.2 5.5 4.3 4.3 0 0 0 7 14z M8 17l-1 3 M12 17l-1 3 M16 17l-1 3',
+  storm: 'M7 14h10a4 4 0 0 0 .6-8A6 6 0 0 0 6.2 5.5 4.3 4.3 0 0 0 7 14z M12 14l-2 4h4l-2 4',
 };
 export function Icon({
   name,
