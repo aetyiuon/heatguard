@@ -96,8 +96,8 @@ export default function App() {
                   </Copy>
                   <Copy>
                     {t(
-                      'Health entries stay on your device. Optional AI requests use public city weather and require a separate choice inside the app.',
-                      'Los datos de salud permanecen en tu dispositivo. Las solicitudes opcionales a la IA usan el tiempo público de la ciudad y requieren una elección dentro de la aplicación.',
+                      'Health entries stay on your device unless you explicitly review and share them in optional personal AI mode. AI requests require a separate choice inside the app.',
+                      'Los datos de salud permanecen en tu dispositivo salvo que los revises y compartas explícitamente en el modo personal de IA. Las solicitudes de IA requieren una elección separada dentro de la aplicación.',
                     )}
                   </Copy>
                   {entry === 'minor' ? (

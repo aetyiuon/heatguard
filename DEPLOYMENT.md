@@ -37,3 +37,7 @@ The core weather, map and journey flows do not require cloud profile storage. Pr
 Collaborator commit `89c401955a652e2b31173ed2930f3236b7ed7479` adds emergency-number suggestions, low-heat presentation, web accessibility states and hash-based tab navigation. It was downloaded and reviewed against deployed commit `dd488bc3b5e19d5df4ef7d50b70177ea87748c40`. The owner release retains that commit and changes only the deployment/collaboration handoff and verification record. It does not change account access, plan, repository visibility, server credentials or database schema.
 
 Vercel's owner dashboard also blocks redeploying the original collaborator-authored commit. The supported Git eligibility rule requires the deployed tip to be authored by the Hobby team's owner. See https://vercel.com/docs/deployments/troubleshoot-project-collaboration#hobby-teams. A real owner review/integration commit must follow future collaborator changes; a collaborator push alone is not a successful deployment.
+
+### Personal AI requests
+
+Personal mode uses the same server secret and requires separate in-app consent after a complete snapshot preview. Do not log request bodies or enable shared request/response caching on `/api/ai/outlook`. Personal results never enter the city cache or Supabase. Test with fictional fixtures only; never paste real health entries into deployment logs, tools or PRs. Groq Free is not a healthcare data agreement. See AI.md for the full contract, provider limits and clinical-use exclusions.
