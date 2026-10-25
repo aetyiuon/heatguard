@@ -16,7 +16,7 @@ Verify `/api/health`, `/api/weather?lat=32.7902&lon=-97.116`, the Today screen, 
 
 ## Optional AI city outlook
 
-See [AI.md](AI.md) before enabling AI. Add `GROQ_API_KEY` as a server-only **Production Secret** and deploy again. The reviewed production model is `openai/gpt-oss-20b`, hosted by Groq; this needs no OpenAI API key. Keep the Groq account on its Free plan without a payment method. No paid/provider fallback is enabled. `/api/health` returns `ai` configuration status and `aiProvider`; verify an actual opt-in city outlook to confirm inference works. The previous blocked Gemini variables are unused. Public city weather alone reaches Groq; health entries, biometrics, routes and all safety calculations remain local. No Supabase change is required. Per-process limits are not a global quota or spending cap.
+See [AI.md](AI.md) before enabling AI. Add `GROQ_API_KEY` as a server-only **Production Secret** and deploy again. The reviewed production model is `openai/gpt-oss-20b`, hosted by Groq; this needs no OpenAI API key. Keep the Groq account on its Free plan without a payment method. No paid/provider fallback is enabled. `/api/health` returns `ai` configuration status and `aiProvider`; verify an actual opt-in city outlook to confirm inference works. The previous blocked Gemini variables are unused. City-only mode sends only public weather. Personal mode separately allows reviewed saved profile/check-in fields after explicit consent; no routes, account identifiers or wearable histories are sent. All safety calculations remain local. No Supabase change is required. Per-process limits are not a global quota or spending cap.
 
 ## Updates
 
