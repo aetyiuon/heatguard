@@ -296,3 +296,35 @@ test('hosted AI routing exposes availability without secrets and blocks non-US p
   assert.equal(denied.status, 403);
   assert.equal((await denied.json()).code, 'region');
 });
+
+test('hosted AI strips only Vercel exact route captures and rejects other query data', async () => {
+  for (const [query, status] of [
+    ['route=ai/outlook&path=ai/outlook', 503],
+    ['route=ai/outlook&path=ai/outlook&profile=fixture', 400],
+    ['route=ai/outlook&path=unexpected', 400],
+    ['route=ai/outlook&path=ai/outlook&path=ai/outlook', 400],
+  ] as const) {
+    const r = await hostedRequest(
+      new Request(`https://heatguard.example/api?${query}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }),
+      {},
+    );
+    assert.equal(r.status, status);
+  }
+});
+
+test('denied Google credentials/project access has an explicit sanitized code', async () => {
+  const handler = createAiHandler({
+    now: () => time,
+    weather: async () => weather(),
+    fetch: async () => Response.json({ error: { message: env.GEMINI_API_KEY } }, { status: 403 }),
+  });
+  const r = await handler(request(), env);
+  assert.equal(r.status, 503);
+  const body = await r.json();
+  assert.equal(body.code, 'access-denied');
+  assert.equal(JSON.stringify(body).includes(env.GEMINI_API_KEY), false);
+});

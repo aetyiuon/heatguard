@@ -219,7 +219,11 @@ export function createAiHandler(
           if (!response.ok) {
             await response.body?.cancel();
             throw new AiFailure(
-              response.status === 429 ? 'quota' : 'provider-unavailable',
+              response.status === 429
+                ? 'quota'
+                : response.status === 403 || response.status === 401
+                  ? 'access-denied'
+                  : 'provider-unavailable',
               response.status === 429 ? 429 : 503,
             );
           }
