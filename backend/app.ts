@@ -11,6 +11,7 @@ export interface Env extends WeatherEnv {
   ALLOWED_ORIGINS?: string;
   MUNICIPAL_GEOJSON_URL?: string;
   COMMUNITY_SALT?: string;
+  COMMUNITY_HANDLER?: (request: Request) => Promise<Response>;
   DB?: { prepare(sql: string): Statement; batch(statements: Statement[]): Promise<unknown> };
   RATE_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
 }
@@ -69,6 +70,7 @@ async function actorFor(request: Request, env: Env) {
   return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 async function community(request: Request, url: URL, env: Env) {
+  if (env.COMMUNITY_HANDLER) return env.COMMUNITY_HANDLER(request);
   if (!env.DB || !env.COMMUNITY_SALT)
     return json(
       {
@@ -206,7 +208,7 @@ export async function handleRequest(request: Request, env: Env = {}): Promise<Re
         response = json({
           ok: true,
           version: '0.1.0',
-          community: !!env.DB && !!env.COMMUNITY_SALT,
+          community: !!env.COMMUNITY_HANDLER || (!!env.DB && !!env.COMMUNITY_SALT),
         });
       else if (url.pathname.startsWith('/community')) response = await community(request, url, env);
       else if (request.method !== 'GET') response = json({ error: 'Method not allowed' }, 405);
