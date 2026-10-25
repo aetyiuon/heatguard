@@ -27,6 +27,7 @@ import { SkyScene } from '../domain/sky';
 import { PersonalSummary } from './PersonalCheckIn';
 import { translatePersonalReason } from '../domain/personal';
 import { GlassSurface } from '../ui/glass';
+import { AiOutlook } from '../ui/AiOutlook';
 const SKY_LABELS: Record<SkyCondition, [string, string]> = {
   clear: ['Clear skies', 'Cielo despejado'],
   'partly-cloudy': ['Partly cloudy', 'Parcialmente nublado'],
@@ -548,6 +549,13 @@ export function Home({ s }: { s: HeatGuardState }) {
         </Card>
       </View>
       <PersonalSummary s={s} />
+      <AiOutlook
+        blocked={!!r?.stopReason || freshness !== 'current' || s.cached || s.weatherFailed}
+        age={s.profile.age}
+        now={s.now}
+        onMap={() => s.setTab('relief')}
+        onForecast={() => s.setTab('plan')}
+      />
       <Card>
         <Copy kind="label">{t('PLAN YOUR JOURNEY', 'PLANEA TU RECORRIDO')}</Copy>
         <Copy kind="h2">
