@@ -5,21 +5,25 @@ Use [AGENTS.md](AGENTS.md) as the shared project guidance. Codex discovers that 
 ## A small-team workflow
 
 1. Each person clones the private repository into their own folder after receiving repository access. Never share an account token or commit local environment files.
-2. Start a task from an up-to-date, clean `main` and create a descriptive branch such as `codex/map-search` or `claude/profile-layout`. These names are examples, not fixed branches. Use a separate clone/worktree for another agent running at the same time.
+2. Start a task from an up-to-date, clean `codex/deploy-live` and create a descriptive branch such as `codex/map-search` or `claude/profile-layout`. These names are examples, not fixed branches. Use a separate clone/worktree for another agent running at the same time.
 3. Give each task a concrete outcome, acceptance checks, and an expected set of files. If tasks both touch `App.tsx`, `src/state/useHeatGuard.ts`, shared types/theme, package files, or a generated dataset, coordinate ownership first or work sequentially. Put the agreement in the task/PR, where the other person can see it.
-4. Keep commits focused. Open a pull request with the handoff below. The other person or their agent reviews the diff and checks; after merging, everyone updates from `main` before starting the next task.
+4. Keep commits focused. Open a pull request targeting `codex/deploy-live` with the handoff below. The other person or their agent reviews the diff and checks; after the owner reviews and integrates the PR, everyone updates from `codex/deploy-live` before starting the next task.
 5. Before combining branches, fetch the latest changes and inspect differences. Integrate on your task branch, resolve conflicts by preserving both intended behaviors, and rerun affected checks. Do not force-push `main`, replace entire shared files to fix a small conflict, or reset away someone else's work.
 
 For a clean clone, the task-start commands look like this:
 
 ```sh
 git status --short --branch
-git switch main
+git switch codex/deploy-live
 git pull --ff-only
 git switch -c claude/profile-layout
 ```
 
 Use your own task branch name. If the checkout has uncommitted work, preserve it before switching or pulling. If it is a ZIP download without Git history, clone the repository for shared development instead of running these commands in a parent repository.
+
+## Production release ownership
+
+The private repository uses Vercel Hobby hosting. GitHub collaborators do not need Vercel or Supabase credentials for app development. Their commits may be blocked from both preview and production deployment because Vercel checks commit authorship. The owner reviews and tests the actual changes, then publishes an owner-authored integration/release commit on `codex/deploy-live`. Preserve all contributor attribution and history. Do not impersonate the owner, share tokens, force-push or change the repository to public. Verify the deployment check and stable URL after the owner release. Supabase schema/function changes are a separate deployment. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## A prompt either person can reuse
 
