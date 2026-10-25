@@ -1,5 +1,13 @@
 # Verification record
 
+## Optional Gemini city outlook - October 25, 2026
+
+- Base: production `codex/deploy-live` at `1f4b9ce8b175cc396241b7aebb3b0bb1f789442e`. Added an adults-only entry affirmation and opt-in Gemini city weather explanations/checklist on Today. Navy glass UI, local risk/timer algorithms, city datasets, routing, native health adapter and Supabase schema remain unchanged.
+- TypeScript and **all 164 tests passed**. Ten new AI tests cover strict adult/consent inputs, rejection of private fields/query strings/oversize payloads before upstream calls, server-only key/header handling, public city-center weather projection, schema/output validation, cached-result expiry and coalescing, stale/future weather suppression, sanitized quota/refusal/provider errors, rate limits and hosted US restrictions. Tests use synthetic public weather and mocked model responses; they are not live-provider or medical validation.
+- Expo web, iOS and Android JavaScript/Hermes exports passed together to `work/ai-export`. No dependencies or lockfile changes. Exports do not verify signed binaries, Swift compilation or physical devices.
+- Local browser: adult entry, under-18 explanation and Spanish entry copy rendered. Real public weather loaded. AI generation was disabled until explicit consent, then the unconfigured-key response displayed honestly without a fake generated answer. Selecting another city cleared the error. Spanish AI labels/privacy copy rendered; English was restored. No browser console errors were reported.
+- Actual Gemini provider verification and production release are pending server credential setup. See AI.md for privacy, prompt/output limitations, US/adult scope, per-process limits and key handling. Generated text has no authority over exposure minutes or stop warnings.
+
 ## Owner release review - October 25, 2026
 
 - Reviewed collaborator commit `89c401955a652e2b31173ed2930f3236b7ed7479` against deployed `dd488bc3b5e19d5df4ef7d50b70177ea87748c40`. Manifest and lockfile are unchanged; existing hosting, city loading and Supabase privacy boundaries remain intact. The collaborator's original commit and attribution are preserved.

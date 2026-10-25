@@ -10,8 +10,18 @@ export async function hostedRequest(
 ): Promise<Response> {
   const incoming = new URL(request.url);
   const route = incoming.searchParams.get('route') ?? incoming.pathname.replace(/^\/api\/?/, '');
-  if (!/^(health|weather|relief|community(?:\/(?:pins|feel|vote))?)$/.test(route))
+  if (!/^(health|weather|relief|ai\/outlook|community(?:\/(?:pins|feel|vote))?)$/.test(route))
     return Response.json({ error: 'Route not found' }, { status: 404 });
+  // This free-tier launch is US-only. Vercel supplies/overwrites its geo header.
+  if (
+    route === 'ai/outlook' &&
+    settings.VERCEL === '1' &&
+    request.headers.get('x-vercel-ip-country') !== 'US'
+  )
+    return Response.json(
+      { code: 'region', error: 'AI outlook is currently available in the United States only.' },
+      { status: 403, headers: { 'Cache-Control': 'no-store' } },
+    );
   const url = new URL(request.url);
   url.pathname = `/${route}`;
   url.searchParams.delete('route');
@@ -31,6 +41,8 @@ export async function hostedRequest(
       ),
     NWS_USER_AGENT: settings.NWS_USER_AGENT ?? 'HeatGuard (https://github.com/aetyiuon/heatguard)',
     AIRNOW_API_KEY: settings.AIRNOW_API_KEY,
+    GEMINI_API_KEY: settings.GEMINI_API_KEY,
+    GEMINI_MODEL: settings.GEMINI_MODEL,
     MUNICIPAL_GEOJSON_URL: settings.MUNICIPAL_GEOJSON_URL,
   };
   if (settings.SUPABASE_URL && settings.SUPABASE_PUBLISHABLE_KEY) {

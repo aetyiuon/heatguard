@@ -40,15 +40,15 @@ export function Profile({ s }: { s: HeatGuardState }) {
   }
   async function save() {
     for (const [v, min, max] of [
-      [draft.age, 1, 120],
+      [draft.age, 18, 120],
       [draft.heightCm, 40, 250],
       [draft.weightKg, 5, 400],
     ])
       if (v !== undefined && (!Number.isFinite(v) || v < min! || v > max!))
         throw new Error(
           t(
-            'Check the optional numbers or leave them blank.',
-            'Revisa los números opcionales o déjalos vacíos.',
+            'Check the optional numbers or leave them blank. HeatGuard is for adults 18+.',
+            'Revisa los números opcionales o déjalos vacíos. HeatGuard es para adultos mayores de 18 años.',
           ),
         );
     await s.saveProfile(draft);
@@ -83,6 +83,12 @@ export function Profile({ s }: { s: HeatGuardState }) {
             'Quiero usar el perfil de salud local opcional',
           )}
         />
+        <Copy style={{ fontSize: 12 }}>
+          {t(
+            'Optional Gemini city outlooks have separate consent. Health entries, wearable readings and routes are never included in AI requests.',
+            'Los resúmenes opcionales de Gemini tienen consentimiento separado. Los datos de salud, relojes y rutas nunca se incluyen en solicitudes de IA.',
+          )}
+        </Copy>
       </Card>
       {consent ? (
         <>

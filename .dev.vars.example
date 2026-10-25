@@ -5,3 +5,6 @@ AIRNOW_API_KEY=
 ALLOWED_ORIGINS=http://localhost:8081,http://localhost:8082
 # Optional authoritative municipal GeoJSON feed; normalize properties as documented.
 MUNICIPAL_GEOJSON_URL=
+# Optional Gemini free-tier key. Server only; never EXPO_PUBLIC_ or committed.
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.5-flash-lite

@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Linking, Modal, ScrollView, View, useWindowDimensions } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useHeatGuard, Tab } from './src/state/useHeatGuard';
 import {
   Button,
+  Card,
   Copy,
   Disclaimer,
   Icon,
@@ -68,6 +69,69 @@ function CallButton({ number }: { number: string }) {
   );
 }
 export default function App() {
+  const [entry, setEntry] = useState<'pending' | 'adult' | 'minor'>('pending');
+  const [language, setLanguage] = useState<'en' | 'es'>('en');
+  if (entry === 'adult') return <HeatGuardApp />;
+  const t = (en: string, es: string) => (language === 'es' ? es : en);
+  return (
+    <SafeAreaProvider>
+      <LocaleContext.Provider value={{ lang: language, large: false }}>
+        <GlassProvider>
+          <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}
+            >
+              <View style={{ width: '100%', maxWidth: 550, alignSelf: 'center', gap: 24 }}>
+                <Brand />
+                <Card>
+                  <Copy kind="label">{t('FOR ADULTS 18+', 'PARA ADULTOS MAYORES DE 18 AÑOS')}</Copy>
+                  <Copy kind="title">
+                    {t('Plan ahead for the heat.', 'Prepárate para el calor.')}
+                  </Copy>
+                  <Copy>
+                    {t(
+                      'HeatGuard is for adults 18 and older. Please confirm before entering. No birthday or identity document is collected.',
+                      'HeatGuard es para adultos mayores de 18 años. Confirma antes de entrar. No recopilamos tu fecha de nacimiento ni documentos de identidad.',
+                    )}
+                  </Copy>
+                  <Copy>
+                    {t(
+                      'Health entries stay on your device. Optional Gemini requests use public city weather and require a separate choice inside the app.',
+                      'Los datos de salud permanecen en tu dispositivo. Las solicitudes opcionales a Gemini usan el tiempo público de la ciudad y requieren una elección dentro de la aplicación.',
+                    )}
+                  </Copy>
+                  {entry === 'minor' ? (
+                    <Copy color={C.orange}>
+                      {t(
+                        'This app is not available to people under 18. For heat information, please talk with a trusted adult and check public weather alerts.',
+                        'Esta aplicación no está disponible para menores de 18 años. Para información sobre el calor, habla con un adulto de confianza y consulta las alertas meteorológicas públicas.',
+                      )}
+                    </Copy>
+                  ) : null}
+                  <Button
+                    label={t('I am 18 or older', 'Tengo 18 años o más')}
+                    onPress={() => setEntry('adult')}
+                  />
+                  <Button
+                    variant="quiet"
+                    label={t('I am under 18', 'Soy menor de 18 años')}
+                    onPress={() => setEntry('minor')}
+                  />
+                  <Button
+                    variant="quiet"
+                    label={language === 'en' ? 'Español' : 'English'}
+                    onPress={() => setLanguage(language === 'en' ? 'es' : 'en')}
+                  />
+                </Card>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </GlassProvider>
+      </LocaleContext.Provider>
+    </SafeAreaProvider>
+  );
+}
+function HeatGuardApp() {
   const s = useHeatGuard();
   return (
     <SafeAreaProvider>

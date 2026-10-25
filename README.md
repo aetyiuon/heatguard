@@ -1,5 +1,7 @@
 # HeatGuard
 
+**Adults 18+ only.** Entry requires an age affirmation. The optional **Gemini / City outlook** on Today explains public Arlington/Dallas/Fort Worth weather in English or Spanish. It does not receive health entries, wearable data or route coordinates, and does not control outdoor minutes or stop warnings. See [AI.md](AI.md) for server setup, Google free-tier privacy, US availability, limits and verification requirements.
+
 A working Expo / React Native scaffold for iOS, Android and browser review. Its purpose is early cooling breaks and heat awareness. It does **not** predict time to heat stroke, provide a diagnosis, or guarantee a safe exposure duration.
 
 The shared UI keeps its navy dark palette, mint/blue/amber accents, system typography and simple amber sun mark. Cards, navigation, sheets and buttons use translucent tinted glass, soft backdrop light and reflective edges; buttons retain their subtle press-down effect without moving nearby content. Supported iOS 26 builds use native Liquid Glass through [Expo GlassEffect](https://docs.expo.dev/versions/v57.0.0/sdk/glass-effect/); the browser uses CSS backdrop blur as a visual approximation. Android, older iOS and development binaries without the module use readable tinted surfaces. Rebuild the native development app after installing the new dependency. Reduce Transparency switches back to opaque surfaces on iOS and supporting browsers. Native rendering and accessibility preference changes still require device acceptance.
