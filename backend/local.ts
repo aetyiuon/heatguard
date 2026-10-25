@@ -5,8 +5,8 @@ import { handleRequest, Env } from './app';
 const env: Env = {
   NWS_USER_AGENT: process.env.NWS_USER_AGENT,
   AIRNOW_API_KEY: process.env.AIRNOW_API_KEY,
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-  GEMINI_MODEL: process.env.GEMINI_MODEL,
+  GROQ_API_KEY: process.env.GROQ_API_KEY,
+  GROQ_MODEL: process.env.GROQ_MODEL,
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
   MUNICIPAL_GEOJSON_URL: process.env.MUNICIPAL_GEOJSON_URL,
 };

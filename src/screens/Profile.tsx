@@ -85,8 +85,8 @@ export function Profile({ s }: { s: HeatGuardState }) {
         />
         <Copy style={{ fontSize: 12 }}>
           {t(
-            'Optional Gemini city outlooks have separate consent. Health entries, wearable readings and routes are never included in AI requests.',
-            'Los resúmenes opcionales de Gemini tienen consentimiento separado. Los datos de salud, relojes y rutas nunca se incluyen en solicitudes de IA.',
+            'Optional AI city outlooks have separate consent. Health entries, wearable readings and routes are never included in AI requests.',
+            'Los resúmenes opcionales de IA tienen consentimiento separado. Los datos de salud, relojes y rutas nunca se incluyen en solicitudes de IA.',
           )}
         </Copy>
       </Card>

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createAiHandler } from '../backend/ai';
 import { hostedRequest } from '../backend/hosted';
-import { parseAiRequest, parseAiText, parseAiResult } from '../src/domain/ai';
+import { AI_MODEL, parseAiRequest, parseAiText, parseAiResult } from '../src/domain/ai';
 import { WeatherBundle } from '../src/domain/types';
 
 const time = Date.parse('2026-10-25T17:00:00Z');
@@ -11,7 +11,7 @@ const text = {
   actions: ['choose-shade', 'verify-access'],
 };
 const payload = { city: 'arlington', language: 'en', adult: true, consent: true };
-const env = { GEMINI_API_KEY: 'server-only-fixture' };
+const env = { GROQ_API_KEY: 'server-only-fixture' };
 function request(value: unknown = payload, suffix = '', method = 'POST') {
   return new Request(`https://heatguard.example/ai/outlook${suffix}`, {
     method,
@@ -36,9 +36,10 @@ function weather(): WeatherBundle {
     warnings: [],
   };
 }
-function response(value: unknown = text, finishReason = 'STOP') {
+function response(value: unknown = text, finishReason = 'stop') {
   return Response.json({
-    candidates: [{ finishReason, content: { parts: [{ text: JSON.stringify(value) }] } }],
+    model: AI_MODEL,
+    choices: [{ finish_reason: finishReason, message: { content: JSON.stringify(value) } }],
   });
 }
 
@@ -119,9 +120,9 @@ test('missing key and unreviewed model fail honestly without upstream calls', as
   const r = await handler(request(), {});
   assert.equal(r.status, 503);
   assert.equal((await r.json()).code, 'not-configured');
-  assert.equal((await handler(request(), { ...env, GEMINI_MODEL: 'paid-model' })).status, 503);
+  assert.equal((await handler(request(), { ...env, GROQ_MODEL: 'paid-model' })).status, 503);
 });
-test('Gemini sees only public city weather; server key is a header, never a response or URL', async () => {
+test('Groq sees only public city weather; server key is a header, never a response or URL', async () => {
   let calls = 0;
   const handler = createAiHandler({
     now: () => time,
@@ -131,14 +132,16 @@ test('Gemini sees only public city weather; server key is a header, never a resp
     },
     fetch: async (url, init) => {
       calls++;
-      assert.equal(
-        String(url),
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent',
-      );
-      assert.equal(new Headers(init?.headers).get('x-goog-api-key'), env.GEMINI_API_KEY);
+      assert.equal(String(url), 'https://api.groq.com/openai/v1/chat/completions');
+      assert.equal(new Headers(init?.headers).get('Authorization'), `Bearer ${env.GROQ_API_KEY}`);
       assert.ok(init?.signal);
       const body = JSON.parse(String(init?.body));
-      const publicData = JSON.parse(body.contents[0].parts[0].text);
+      assert.equal(body.model, AI_MODEL);
+      assert.equal(body.response_format.type, 'json_schema');
+      assert.equal(body.response_format.json_schema.strict, true);
+      assert.equal(body.max_completion_tokens, 1536);
+      assert.equal(body.reasoning_effort, 'low');
+      const publicData = JSON.parse(body.messages[1].content);
       assert.deepEqual(Object.keys(publicData).sort(), [
         'catalogCaveat',
         'city',
@@ -157,7 +160,7 @@ test('Gemini sees only public city weather; server key is a header, never a resp
         'consent',
       ])
         assert.equal(key in publicData, false);
-      assert.equal(String(init?.body).includes(env.GEMINI_API_KEY), false);
+      assert.equal(String(init?.body).includes(env.GROQ_API_KEY), false);
       assert.equal(body.tools, undefined);
       return response();
     },
@@ -167,6 +170,10 @@ test('Gemini sees only public city weather; server key is a header, never a resp
   assert.equal(r.headers.get('Cache-Control'), 'no-store');
   const body = await r.json();
   assert.ok(parseAiResult(body, time));
+  assert.equal(body.provider, 'groq');
+  assert.equal(body.model, AI_MODEL);
+  assert.equal(parseAiResult({ ...body, provider: 'google' }, time), null);
+  assert.equal(parseAiResult({ ...body, model: 'gemini-3.5-flash-lite' }, time), null);
   assert.equal(parseAiResult({ ...body, sources: undefined }, time), null);
   assert.equal(parseAiResult({ ...body, humidity: 150 }, time), null);
   assert.equal(
@@ -177,7 +184,7 @@ test('Gemini sees only public city weather; server key is a header, never a resp
   assert.equal(body.summary, text.summary);
   assert.equal(body.weatherTime, new Date(time).toISOString());
   assert.equal(body.expiresAt, new Date(time + 600_000).toISOString());
-  assert.equal(JSON.stringify(body).includes(env.GEMINI_API_KEY), false);
+  assert.equal(JSON.stringify(body).includes(env.GROQ_API_KEY), false);
   assert.equal(body.window, undefined);
   assert.equal((await handler(request(), env)).status, 200);
   assert.equal(calls, 1);
@@ -204,7 +211,7 @@ test('cached AI expires and concurrent public requests coalesce', async () => {
   assert.equal((await handler(request(), env)).status, 200);
   assert.equal(calls, 2);
 });
-test('stale or future city weather never reaches Google', async () => {
+test('stale or future city weather never reaches Groq', async () => {
   for (const offset of [-61 * 60_000, 11 * 60_000]) {
     let calls = 0;
     const handler = createAiHandler({
@@ -226,20 +233,21 @@ test('stale or future city weather never reaches Google', async () => {
 });
 test('quota, refusal, invalid JSON and provider errors are sanitized with no fake AI fallback', async () => {
   const cases: [() => Promise<Response>, number][] = [
-    [async () => Response.json({ error: env.GEMINI_API_KEY }, { status: 429 }), 429],
-    [async () => Response.json({ error: env.GEMINI_API_KEY }, { status: 401 }), 503],
+    [async () => Response.json({ error: env.GROQ_API_KEY }, { status: 429 }), 429],
+    [async () => Response.json({ error: env.GROQ_API_KEY }, { status: 401 }), 503],
     [async () => response(text, 'SAFETY'), 502],
     [async () => response({ ...text, summary: 'Stay for 45 minutes.' }), 502],
     [
       async () =>
         Response.json({
-          candidates: [{ finishReason: 'STOP', content: { parts: [{ text: '{' }] } }],
+          model: AI_MODEL,
+          choices: [{ finish_reason: 'stop', message: { content: '{' } }],
         }),
       502,
     ],
     [
       async () => {
-        throw new Error(env.GEMINI_API_KEY);
+        throw new Error(env.GROQ_API_KEY);
       },
       503,
     ],
@@ -253,7 +261,7 @@ test('quota, refusal, invalid JSON and provider errors are sanitized with no fak
     const r = await handler(request(), env);
     assert.equal(r.status, expected);
     const body = await r.text();
-    assert.equal(body.includes(env.GEMINI_API_KEY), false);
+    assert.equal(body.includes(env.GROQ_API_KEY), false);
     assert.equal(body.includes('summary'), false);
   }
 });
@@ -285,7 +293,8 @@ test('hosted AI routing exposes availability without secrets and blocks non-US p
   const health = await hostedRequest(new Request('https://heatguard.example/api/health'), env);
   const body = await health.json();
   assert.equal(body.ai, true);
-  assert.equal(JSON.stringify(body).includes(env.GEMINI_API_KEY), false);
+  assert.equal(body.aiProvider, 'groq');
+  assert.equal(JSON.stringify(body).includes(env.GROQ_API_KEY), false);
   const denied = await hostedRequest(
     new Request('https://heatguard.example/api/ai/outlook', {
       method: 'POST',
@@ -316,15 +325,52 @@ test('hosted AI strips only Vercel exact route captures and rejects other query 
   }
 });
 
-test('denied Google credentials/project access has an explicit sanitized code', async () => {
+test('denied Groq credentials/project access has an explicit sanitized code', async () => {
   const handler = createAiHandler({
     now: () => time,
     weather: async () => weather(),
-    fetch: async () => Response.json({ error: { message: env.GEMINI_API_KEY } }, { status: 403 }),
+    fetch: async () => Response.json({ error: { message: env.GROQ_API_KEY } }, { status: 403 }),
   });
   const r = await handler(request(), env);
   assert.equal(r.status, 503);
   const body = await r.json();
   assert.equal(body.code, 'access-denied');
-  assert.equal(JSON.stringify(body).includes(env.GEMINI_API_KEY), false);
+  assert.equal(JSON.stringify(body).includes(env.GROQ_API_KEY), false);
+});
+
+test('unexpected provider models, refusals and truncated outputs are rejected', async () => {
+  for (const value of [
+    {
+      model: 'unreviewed-model',
+      choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(text) } }],
+    },
+    {
+      model: AI_MODEL,
+      choices: [
+        { finish_reason: 'stop', message: { refusal: 'blocked', content: JSON.stringify(text) } },
+      ],
+    },
+    {
+      model: AI_MODEL,
+      choices: [{ finish_reason: 'length', message: { content: JSON.stringify(text) } }],
+    },
+  ]) {
+    const handler = createAiHandler({
+      now: () => time,
+      weather: async () => weather(),
+      fetch: async () => Response.json(value),
+    });
+    const result = await handler(request(), env);
+    assert.equal(result.status, 502);
+    assert.equal((await result.json()).code, 'invalid-response');
+  }
+});
+
+test('legacy Gemini configuration cannot enable the migrated Groq integration', async () => {
+  const r = await hostedRequest(new Request('https://heatguard.example/api/health'), {
+    GEMINI_API_KEY: 'legacy-fixture',
+  });
+  const body = await r.json();
+  assert.equal(body.ai, false);
+  assert.equal(body.aiProvider, 'groq');
 });

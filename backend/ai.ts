@@ -1,5 +1,7 @@
 import {
   AI_ACTIONS,
+  AI_MODEL,
+  AI_PROVIDER,
   AI_CITY_NAMES,
   AiCity,
   AiOutlookResult,
@@ -11,8 +13,11 @@ import { weatherFreshness, currentWeatherSource } from '../src/domain/weather';
 import { getWeather, WeatherEnv } from './weather';
 
 export interface AiEnv extends WeatherEnv {
-  GEMINI_API_KEY?: string;
-  GEMINI_MODEL?: string;
+  GROQ_API_KEY?: string;
+  GROQ_MODEL?: string;
+}
+export function aiConfigured(env: AiEnv) {
+  return !!env.GROQ_API_KEY?.trim() && (!env.GROQ_MODEL || env.GROQ_MODEL === AI_MODEL);
 }
 const CENTERS: Record<AiCity, Place> = {
   arlington: {
@@ -53,7 +58,7 @@ const SCHEMA = {
   required: ['summary', 'actions'],
 };
 const INSTRUCTION = `You explain public city weather for HeatGuard, an adults-only US heat-awareness app.
-Use only supplied public data. Write the summary in the requested language. Describe weather qualitatively, without numbers, durations, exposure limits, personal health advice, diagnosis, safety assurances or risk ratings. Never say it is safe to stay outside or to skip cooling. Do not invent amenities, availability, forecasts, route geometry or official alerts. Do not mention personal data: none is supplied. Choose two to four distinct action IDs from the schema, in a useful order for this weather. Actions are an app checklist, not medical advice. Return only the schema JSON. Do not use tools or external sources.`;
+Use only supplied public data. Write exactly two short summary sentences in the requested language. Describe weather qualitatively, without digits, durations, exposure limits, personal health advice, diagnosis, safety assurances or risk ratings. In the summary do not use the words safe, safely, unsafe, hours, minutes, seguro, segura, horas or minutos. Never say it is safe to stay outside or to skip cooling. Do not invent amenities, availability, forecasts, route geometry or official alerts. Do not mention personal data: none is supplied. Choose two to four distinct action IDs from the schema, in a useful order for this weather. Actions are an app checklist, not medical advice. Return only the schema JSON. Do not use tools or external sources.`;
 const TTL = 10 * 60_000;
 function json(data: unknown, status = 200) {
   return Response.json(data, {
@@ -69,7 +74,7 @@ class AiFailure extends Error {
     super(code);
   }
 }
-/** Isolated factory enables privacy/timeout tests without calling Google or personal weather. */
+/** Isolated factory enables privacy/timeout tests without calling a provider or personal weather. */
 export function createAiHandler(
   deps: {
     fetch?: typeof fetch;
@@ -125,14 +130,14 @@ export function createAiHandler(
         },
         400,
       );
-    if (!env.GEMINI_API_KEY?.trim())
+    if (!env.GROQ_API_KEY?.trim())
       return json(
-        { code: 'not-configured', error: 'Gemini has not been enabled by the app owner.' },
+        { code: 'not-configured', error: 'AI has not been enabled by the app owner.' },
         503,
       );
-    const model = env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
-    // Keep the free-tier integration on its reviewed text model; no paid fallback.
-    if (model !== 'gemini-3.5-flash-lite')
+    const model = env.GROQ_MODEL || AI_MODEL;
+    // Pin the reviewed production model; do not silently use another host or paid fallback.
+    if (!aiConfigured(env))
       return json(
         { code: 'configuration', error: 'AI model configuration needs owner review.' },
         503,
@@ -158,7 +163,7 @@ export function createAiHandler(
           day = today;
           used = 0;
         }
-        // Best-effort per-process bound only. Google account quotas remain authoritative.
+        // Best-effort per-process bound only. Provider account quotas remain authoritative.
         if (used >= 30)
           return json(
             {
@@ -198,19 +203,24 @@ export function createAiHandler(
               'Relief Map contains incomplete published candidate records. Facility hours, access, water flow and shade are unverified. No individual route is supplied.',
           };
           const response = await (deps.fetch ?? fetch)(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+            'https://api.groq.com/openai/v1/chat/completions',
             {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'x-goog-api-key': env.GEMINI_API_KEY!,
+                Authorization: `Bearer ${env.GROQ_API_KEY!}`,
               },
               body: JSON.stringify({
-                systemInstruction: { parts: [{ text: INSTRUCTION }] },
-                contents: [{ role: 'user', parts: [{ text: JSON.stringify(publicData) }] }],
-                generationConfig: {
-                  maxOutputTokens: 1200,
-                  responseFormat: { text: { mimeType: 'APPLICATION_JSON', schema: SCHEMA } },
+                model,
+                messages: [
+                  { role: 'system', content: INSTRUCTION },
+                  { role: 'user', content: JSON.stringify(publicData) },
+                ],
+                max_completion_tokens: 1536,
+                reasoning_effort: 'low',
+                response_format: {
+                  type: 'json_schema',
+                  json_schema: { name: 'city_outlook', strict: true, schema: SCHEMA },
                 },
               }),
               signal: AbortSignal.timeout(20_000),
@@ -228,15 +238,16 @@ export function createAiHandler(
             );
           }
           const result = await response.json();
-          const candidate = result.candidates?.[0];
-          if (candidate?.finishReason !== 'STOP') throw new AiFailure('invalid-response', 502);
-          const prose = candidate.content?.parts
-            ?.filter(
-              (p: { text?: string; thought?: boolean }) => typeof p.text === 'string' && !p.thought,
-            )
-            .map((p: { text: string }) => p.text)
-            .join('');
-          if (!prose || prose.length > 2000) throw new AiFailure('invalid-response', 502);
+          const candidate = result.choices?.[0];
+          if (
+            result.model !== model ||
+            candidate?.finish_reason !== 'stop' ||
+            candidate.message?.refusal
+          )
+            throw new AiFailure('invalid-response', 502);
+          const prose = candidate.message?.content;
+          if (typeof prose !== 'string' || !prose || prose.length > 2000)
+            throw new AiFailure('invalid-response', 502);
           let parsed;
           try {
             parsed = parseAiText(JSON.parse(prose));
@@ -251,6 +262,7 @@ export function createAiHandler(
             ...parsed,
             city,
             language,
+            provider: AI_PROVIDER,
             model,
             generatedAt: new Date(generatedAt).toISOString(),
             expiresAt: new Date(

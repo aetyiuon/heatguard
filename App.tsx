@@ -96,8 +96,8 @@ export default function App() {
                   </Copy>
                   <Copy>
                     {t(
-                      'Health entries stay on your device. Optional Gemini requests use public city weather and require a separate choice inside the app.',
-                      'Los datos de salud permanecen en tu dispositivo. Las solicitudes opcionales a Gemini usan el tiempo público de la ciudad y requieren una elección dentro de la aplicación.',
+                      'Health entries stay on your device. Optional AI requests use public city weather and require a separate choice inside the app.',
+                      'Los datos de salud permanecen en tu dispositivo. Las solicitudes opcionales a la IA usan el tiempo público de la ciudad y requieren una elección dentro de la aplicación.',
                     )}
                   </Copy>
                   {entry === 'minor' ? (

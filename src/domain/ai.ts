@@ -1,4 +1,6 @@
 /** The complete public-only AI contract. Never extend it with profile or route data. */
+export const AI_PROVIDER = 'groq' as const;
+export const AI_MODEL = 'openai/gpt-oss-20b' as const;
 export const AI_CITIES = ['arlington', 'dallas', 'fort-worth'] as const;
 export type AiCity = (typeof AI_CITIES)[number];
 export const AI_CITY_NAMES: Record<AiCity, string> = {
@@ -33,6 +35,7 @@ export interface AiOutlookResult extends AiText {
   temperatureC: number;
   humidity: number;
   sources: string[];
+  provider: typeof AI_PROVIDER;
   model: string;
 }
 export function parseAiRequest(value: unknown): AiRequest | null {
@@ -78,7 +81,7 @@ export function parseAiResult(value: unknown, now: number): AiOutlookResult | nu
   if (!parseAiText({ summary: v.summary, actions: v.actions })) return null;
   if (!AI_CITIES.includes(v.city as AiCity) || !['en', 'es'].includes(v.language as string))
     return null;
-  if (v.model !== 'gemini-3.5-flash-lite') return null;
+  if (v.provider !== AI_PROVIDER || v.model !== AI_MODEL) return null;
   for (const key of ['generatedAt', 'expiresAt', 'weatherTime']) {
     if (typeof v[key] !== 'string' || !Number.isFinite(Date.parse(v[key]))) return null;
   }

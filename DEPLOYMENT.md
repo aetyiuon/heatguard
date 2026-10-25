@@ -14,9 +14,9 @@ The adapter retains request validation, data provenance, original acquisition ti
 
 Verify `/api/health`, `/api/weather?lat=32.7902&lon=-97.116`, the Today screen, the Relief Map and a journey before distributing the production URL. Check a clean browser session as well as the authenticated owner session. An Expo export does not verify native binaries or device behavior.
 
-## Optional Gemini city outlook
+## Optional AI city outlook
 
-See [AI.md](AI.md) before enabling AI. Add the dedicated free-tier `GEMINI_API_KEY` as a server-only Secret for Production and deploy again. Never put it in `EXPO_PUBLIC_*` or source. The default/reviewed model is `gemini-3.5-flash-lite`; no paid fallback is implemented. Keep Google billing unlinked for free-only usage. `/api/health` reports configuration with `ai`; verify an actual opt-in city outlook to confirm provider access. This launch is adults-only and US-only for Gemini, uses public city weather only, and makes no Supabase schema or health-data changes. Serverless memory counters are not a global spending cap; Google's account quotas remain authoritative.
+See [AI.md](AI.md) before enabling AI. Add `GROQ_API_KEY` as a server-only **Production Secret** and deploy again. The reviewed production model is `openai/gpt-oss-20b`, hosted by Groq; this needs no OpenAI API key. Keep the Groq account on its Free plan without a payment method. No paid/provider fallback is enabled. `/api/health` returns `ai` configuration status and `aiProvider`; verify an actual opt-in city outlook to confirm inference works. The previous blocked Gemini variables are unused. Public city weather alone reaches Groq; health entries, biometrics, routes and all safety calculations remain local. No Supabase change is required. Per-process limits are not a global quota or spending cap.
 
 ## Updates
 
@@ -31,7 +31,6 @@ The dedicated HeatGuard project is `ljoluomippttmxosfscz` in the user-selected A
 Community writes still require the app's explicit sharing consent. Feeling locations are rounded to about 1 km; shared amenity suggestions are deliberately public approximate locations. Expired pins/reports are filtered and physically removed when the feed is read (votes cascade with pins). Without traffic, expired rows can remain until the next feed read. Anonymous install IDs are not authenticated people, and rate limits are abuse friction, not proof of identity or facility status. No new user accounts or profile synchronization have been added.
 
 The core weather, map and journey flows do not require cloud profile storage. Profiles, contacts, route recordings and biometrics remain in their existing local/memory storage; hosting does not opt users into sharing them.
-
 
 ## Owner release review - October 25, 2026
 
