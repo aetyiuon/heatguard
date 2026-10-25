@@ -3,12 +3,13 @@ import { getRelief } from './relief';
 import { bundledCity } from '../src/domain/cities';
 import { resolveEmergencyNumber } from '../src/domain/emergency';
 import { Place, ReliefPin } from '../src/domain/types';
+import { aiOutlook, AiEnv } from './ai';
 interface Statement {
   bind(...values: unknown[]): Statement;
   all<T = any>(): Promise<{ results: T[] }>;
   run(): Promise<unknown>;
 }
-export interface Env extends WeatherEnv {
+export interface Env extends WeatherEnv, AiEnv {
   ALLOWED_ORIGINS?: string;
   MUNICIPAL_GEOJSON_URL?: string;
   COMMUNITY_SALT?: string;
@@ -210,9 +211,13 @@ export async function handleRequest(request: Request, env: Env = {}): Promise<Re
         response = json({
           ok: true,
           version: '0.1.0',
+          ai:
+            !!env.GEMINI_API_KEY?.trim() &&
+            (!env.GEMINI_MODEL || env.GEMINI_MODEL === 'gemini-3.5-flash-lite'),
           community: !!env.COMMUNITY_HANDLER || (!!env.DB && !!env.COMMUNITY_SALT),
         });
       else if (url.pathname.startsWith('/community')) response = await community(request, url, env);
+      else if (url.pathname === '/ai/outlook') response = await aiOutlook(request, env);
       else if (request.method !== 'GET') response = json({ error: 'Method not allowed' }, 405);
       else if (url.pathname === '/weather')
         response = json(await getWeather(parsePlace(url), env), 200, true);
