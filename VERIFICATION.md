@@ -1,5 +1,11 @@
 # Verification record
 
+## Optional personal AI inputs - October 25, 2026
+
+- Base: `9ab7e099ff5e4c7afb0043ec2cea180558461eaa`; branch `codex/personal-ai-inputs`. Adds opt-in reviewed personal wellness context to Groq without changing the local risk/timer method. The prior city-only privacy entries below describe historical releases, not the new personal sharing mode.
+- TypeScript and all **173 tests passed**. Five new personal-AI tests use fictional fixtures to cover separate consent, exact nested validation, explicit projection, all-factor provider payloads, no raw profile echo, isolated personal requests (no shared cache/coalescing), and server-side stop gates before provider calls. All nineteen AI-specific tests also passed after the final prompt/schema change. No real personal health entries are used for model or browser testing.
+- Final Expo web, iOS and Android JavaScript/Hermes exports passed together to `work/personal-ai-export-final`. These do not verify Swift compilation, signed binaries, real Watch data or physical devices. Production/provider/browser verification follows deployment; see AI.md for the changed disclosure, strict contract, provider scope and no-cache isolation.
+
 ## Groq city outlook migration - October 25, 2026
 
 - Base: production `codex/deploy-live` at `da8fbb3b5c4dff09b8f68b06883dee7e3fcb584a`; feature branch `codex/groq-live-ai`. Replaces the blocked Gemini provider with Groq's production `openai/gpt-oss-20b` model. No dependency, dataset, local risk/timer or Supabase changes.

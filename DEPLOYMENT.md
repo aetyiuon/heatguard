@@ -16,7 +16,7 @@ Verify `/api/health`, `/api/weather?lat=32.7902&lon=-97.116`, the Today screen, 
 
 ## Optional AI city outlook
 
-See [AI.md](AI.md) before enabling AI. Add `GROQ_API_KEY` as a server-only **Production Secret** and deploy again. The reviewed production model is `openai/gpt-oss-20b`, hosted by Groq; this needs no OpenAI API key. Keep the Groq account on its Free plan without a payment method. No paid/provider fallback is enabled. `/api/health` returns `ai` configuration status and `aiProvider`; verify an actual opt-in city outlook to confirm inference works. The previous blocked Gemini variables are unused. Public city weather alone reaches Groq; health entries, biometrics, routes and all safety calculations remain local. No Supabase change is required. Per-process limits are not a global quota or spending cap.
+See [AI.md](AI.md) before enabling AI. Add `GROQ_API_KEY` as a server-only **Production Secret** and deploy again. The reviewed production model is `openai/gpt-oss-20b`, hosted by Groq; this needs no OpenAI API key. Keep the Groq account on its Free plan without a payment method. No paid/provider fallback is enabled. `/api/health` returns `ai` configuration status and `aiProvider`; verify an actual opt-in city outlook to confirm inference works. The previous blocked Gemini variables are unused. City-only mode sends only public weather. Personal mode separately allows reviewed saved profile/check-in fields after explicit consent; no routes, account identifiers or wearable histories are sent. All safety calculations remain local. No Supabase change is required. Per-process limits are not a global quota or spending cap.
 
 ## Updates
 
@@ -37,3 +37,7 @@ The core weather, map and journey flows do not require cloud profile storage. Pr
 Collaborator commit `89c401955a652e2b31173ed2930f3236b7ed7479` adds emergency-number suggestions, low-heat presentation, web accessibility states and hash-based tab navigation. It was downloaded and reviewed against deployed commit `dd488bc3b5e19d5df4ef7d50b70177ea87748c40`. The owner release retains that commit and changes only the deployment/collaboration handoff and verification record. It does not change account access, plan, repository visibility, server credentials or database schema.
 
 Vercel's owner dashboard also blocks redeploying the original collaborator-authored commit. The supported Git eligibility rule requires the deployed tip to be authored by the Hobby team's owner. See https://vercel.com/docs/deployments/troubleshoot-project-collaboration#hobby-teams. A real owner review/integration commit must follow future collaborator changes; a collaborator push alone is not a successful deployment.
+
+### Personal AI requests
+
+Personal mode uses the same server secret and requires separate in-app consent after a complete snapshot preview. Do not log request bodies or enable shared request/response caching on `/api/ai/outlook`. Personal results never enter the city cache or Supabase. Test with fictional fixtures only; never paste real health entries into deployment logs, tools or PRs. Groq Free is not a healthcare data agreement. See AI.md for the full contract, provider limits and clinical-use exclusions.

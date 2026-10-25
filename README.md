@@ -1,6 +1,6 @@
 # HeatGuard
 
-**Adults 18+ only.** Entry requires an age affirmation. The optional **AI / City outlook** powered by Groq on Today explains public Arlington/Dallas/Fort Worth weather in English or Spanish. It does not receive health entries, wearable data or route coordinates, and does not control outdoor minutes or stop warnings. See [AI.md](AI.md) for server setup, provider privacy, US availability, limits and verification requirements.
+**Adults 18+ only.** Entry requires an age affirmation. Optional Groq AI explains public city weather and a planning checklist in English/Spanish. Personal mode lets users review and explicitly share their saved profile and latest check-in for an informational explanation of planning factors. It does not calculate outdoor minutes or override local stop warnings. Personal requests are not cached or saved as AI history. Read the sensitive-data notice and [AI.md](AI.md) before enabling personal sharing.
 
 A working Expo / React Native scaffold for iOS, Android and browser review. Its purpose is early cooling breaks and heat awareness. It does **not** predict time to heat stroke, provide a diagnosis, or guarantee a safe exposure duration.
 

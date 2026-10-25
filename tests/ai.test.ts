@@ -94,7 +94,7 @@ test('AI endpoint rejects private/oversized/malformed input before any upstream 
   ])
     assert.equal((await handler(request(data), env)).status, 400);
   assert.equal((await handler(request(payload, '?lat=32'), env)).status, 400);
-  assert.equal((await handler(request({ secret: 'x'.repeat(300) }), env)).status, 413);
+  assert.equal((await handler(request({ secret: 'x'.repeat(5000) }), env)).status, 413);
   assert.equal((await handler(request({}, '', 'GET'), env)).status, 405);
   assert.equal(
     (

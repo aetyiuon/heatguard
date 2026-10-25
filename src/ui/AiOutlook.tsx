@@ -8,6 +8,7 @@ import {
   AiOutlookResult,
   parseAiResult,
 } from '../domain/ai';
+import { AiPersonalInput, projectAiPersonal, parseAiPersonal } from '../domain/aiPersonal';
 import { API_BASE } from '../services/api';
 import { Button, Card, Chip, Copy, Toggle, useLocale } from './components';
 import { C, styles } from './theme';
@@ -35,6 +36,10 @@ const ACTION_COPY: Record<AiAction, [string, string]> = {
   ],
 };
 const ERRORS: Record<string, [string, string]> = {
+  'personal-stop': [
+    'Your current inputs require a pause. Review your local plan and update your check-in before requesting AI.',
+    'Tus datos requieren una pausa. Revisa tu plan local y actualiza tu revisión antes de solicitar IA.',
+  ],
   'not-configured': [
     'AI is not enabled yet. The app owner needs to configure its server key.',
     'La IA aún no está habilitada. Falta configurar la clave en el servidor.',
@@ -66,22 +71,44 @@ export function AiOutlook({
   now,
   onMap,
   onForecast,
+  personalInput,
+  onProfile,
+  onCheckIn,
 }: {
   blocked: boolean;
   age?: number;
   now: number;
   onMap: () => void;
   onForecast: () => void;
+  personalInput: AiPersonalInput;
+  onProfile: () => void;
+  onCheckIn: () => void;
 }) {
   const { t, lang } = useLocale();
   const [city, setCity] = useState<AiCity>('arlington');
+  const [includePersonal, setIncludePersonal] = useState(false);
+  const personal = projectAiPersonal(
+    personalInput.profile,
+    personalInput.checkIn,
+    personalInput.workload,
+  );
+  const signature = includePersonal ? JSON.stringify(personal) : '';
+  const validPersonal = !!parseAiPersonal(personal, now);
   const [consent, setConsent] = useState(false);
+  const [consentSignature, setConsentSignature] = useState('');
+  const requestSignature = `${city}:${lang}:${includePersonal}:${signature}`;
+  const approvedConsent = consent && consentSignature === requestSignature;
+  const [resultSignature, setResultSignature] = useState('');
   const [result, setResult] = useState<AiOutlookResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const controller = useRef<AbortController | null>(null);
   const revision = useRef(0);
-  const unavailable = blocked || (age !== undefined && age < 18);
+  const unavailable =
+    blocked || (age !== undefined && age < 18) || (includePersonal && !validPersonal);
+  useEffect(() => {
+    setConsent(false);
+  }, [includePersonal, signature, city, lang]);
   useEffect(() => {
     revision.current++;
     controller.current?.abort();
@@ -93,9 +120,9 @@ export function AiOutlook({
       revision.current++;
       controller.current?.abort();
     };
-  }, [city, lang, consent, unavailable]);
+  }, [city, lang, consent, unavailable, includePersonal, signature]);
   async function generate() {
-    if (unavailable || !consent || controller.current) return;
+    if (unavailable || !approvedConsent || controller.current) return;
     const current = ++revision.current;
     const abort = new AbortController();
     controller.current = abort;
@@ -107,8 +134,14 @@ export function AiOutlook({
       const response = await fetch(`${API_BASE}/ai/outlook`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Explicit projection: never spread app state, health checks or route objects.
-        body: JSON.stringify({ city, language: lang, adult: true, consent: true }),
+        // No state spreads. Personal data leaves the device only after preview and separate consent.
+        body: JSON.stringify({
+          city,
+          language: lang,
+          adult: true,
+          consent: true,
+          ...(includePersonal ? { personalConsent: true, personal } : {}),
+        }),
         signal: abort.signal,
       });
       const data = await response.json();
@@ -117,8 +150,14 @@ export function AiOutlook({
         setError(data.code in ERRORS ? data.code : 'unavailable');
         return;
       }
-      if (!parseAiResult(data, Date.now()) || data.city !== city || data.language !== lang)
+      if (
+        !parseAiResult(data, Date.now()) ||
+        data.city !== city ||
+        data.language !== lang ||
+        data.scope !== (includePersonal ? 'personal' : 'city')
+      )
         throw new Error('Invalid outlook');
+      setResultSignature(requestSignature);
       setResult(data);
     } catch {
       if (revision.current === current) setError('unavailable');
@@ -133,19 +172,24 @@ export function AiOutlook({
     result.city === city &&
     result.language === lang &&
     Date.parse(result.expiresAt) > Math.max(now, Date.now()) &&
-    consent &&
+    approvedConsent &&
+    resultSignature === requestSignature &&
     !unavailable
       ? result
       : null;
   return (
     <Card>
-      <Copy kind="label">{t('AI / CITY OUTLOOK', 'IA / RESUMEN DE LA CIUDAD')}</Copy>
+      <Copy kind="label">
+        {includePersonal
+          ? t('AI / MY PLANNING CONTEXT', 'IA / MI CONTEXTO PERSONAL')
+          : t('AI / CITY OUTLOOK', 'IA / RESUMEN DE LA CIUDAD')}
+      </Copy>
       <Copy kind="h2">
         {t('A little context before you go.', 'Un poco de contexto antes de salir.')}
       </Copy>
       <Copy>
         {t(
-          'Get an AI explanation of public city weather and a prioritized planning checklist, powered by Groq. This uses city-center conditions, not your exact location or personal heat estimate.',
+          'Get a Groq AI explanation of city weather and planning factors. Optionally include the personal inputs you review below. This uses the selected city center, not your actual heat-check location. AI cannot calculate or extend your outdoor minutes.',
           'Obtén una explicación del tiempo público y una lista para planear con IA de Groq. Usa el centro de la ciudad, no tu ubicación exacta ni tu estimación personal.',
         )}
       </Copy>
@@ -159,9 +203,54 @@ export function AiOutlook({
           />
         ))}
       </View>
+      <Toggle
+        label={t('Include my personal inputs', 'Incluir mis datos personales')}
+        value={includePersonal}
+        onChange={setIncludePersonal}
+      />
+      {includePersonal ? (
+        <View style={{ gap: 12 }}>
+          <Copy kind="h2">{t('Review what will be sent', 'Revisa lo que se enviará')}</Copy>
+          <Copy>
+            {t(
+              'Your saved profile and latest check-in are shown below. Edit them before sharing. Missing measurements stay missing. This is optional wellness planning, not medical care; do not enter clinical records or anyone else’s information.',
+              'Tu perfil guardado y última revisión aparecen abajo. Edítalos antes de compartir. Las lecturas faltantes siguen ausentes. Es planificación de bienestar opcional, no atención médica; no ingreses expedientes clínicos ni información de otras personas.',
+            )}
+          </Copy>
+          <PersonalInputReview input={personal} />
+          {!validPersonal ? (
+            <Copy color={C.orange}>
+              {t(
+                'Update stale check-ins or invalid profile values before sharing.',
+                'Actualiza las revisiones antiguas o los valores de perfil no válidos antes de compartir.',
+              )}
+            </Copy>
+          ) : null}
+          <View style={styles.wrap}>
+            <Button
+              variant="quiet"
+              label={t('Edit my inputs', 'Editar mis datos')}
+              onPress={onProfile}
+            />
+            <Button
+              variant="quiet"
+              label={t('Update my check-in', 'Actualizar mi revisión')}
+              onPress={onCheckIn}
+            />
+          </View>
+          <Copy>
+            {t(
+              'Sending these entries shares sensitive personal information with HeatGuard’s server and Groq. No names, contacts, GPS, routes, device history or account identifiers are included. Personal requests and answers are not cached, saved to Supabase or logged by this app. Groq may retain request content for up to 30 days for reliability or abuse monitoring, subject to its data controls.',
+              'Enviar estos datos comparte información personal sensible con el servidor de HeatGuard y Groq. No incluye nombres, contactos, GPS, rutas, historial del reloj ni identificadores de cuenta. La aplicación no guarda, registra ni almacena en caché estas solicitudes o respuestas personales. Groq puede conservar contenido hasta 30 días para fiabilidad o abuso, según sus controles.',
+            )}
+          </Copy>
+        </View>
+      ) : null}
       <Copy>
         {t(
-          'Only the chosen city, language and public weather go to Groq. Your health entries, biometrics and routes stay out of AI requests. Groq may temporarily retain request content for troubleshooting or abuse review, subject to its data controls.',
+          includePersonal
+            ? 'The chosen city, language, public weather and exactly the reviewed personal inputs will go to Groq for this request. Nothing is shared until you consent and press Generate.'
+            : 'City-only mode sends public weather, city and language to Groq. It excludes health entries, biometrics and routes. Groq may temporarily retain content for troubleshooting or abuse review.',
           'Solo se envían a Groq la ciudad, el idioma y el tiempo público. No se envían datos de salud, biometría ni rutas. Groq puede guardar temporalmente las solicitudes para resolver problemas o investigar abusos, según sus controles de datos.',
         )}
       </Copy>
@@ -172,11 +261,18 @@ export function AiOutlook({
       />
       <Toggle
         label={t(
-          'I agree to this optional Groq AI request (18+)',
-          'Acepto esta solicitud opcional a la IA de Groq (18+)',
+          includePersonal
+            ? 'I agree to send the reviewed personal inputs to Groq for this request (18+)'
+            : 'I agree to this optional Groq AI request (18+)',
+          includePersonal
+            ? 'Acepto enviar los datos personales revisados a Groq para esta solicitud (18+)'
+            : 'Acepto esta solicitud opcional a la IA de Groq (18+)',
         )}
-        value={consent}
-        onChange={setConsent}
+        value={approvedConsent}
+        onChange={(next) => {
+          setConsent(next);
+          setConsentSignature(next ? requestSignature : '');
+        }}
       />
       {unavailable ? (
         <Copy color={C.orange}>
@@ -191,9 +287,11 @@ export function AiOutlook({
         label={
           loading
             ? t('Generating outlook…', 'Generando resumen…')
-            : t('Generate city outlook', 'Generar resumen de la ciudad')
+            : includePersonal
+              ? t('Explain my planning factors', 'Explicar mis factores personales')
+              : t('Generate city outlook', 'Generar resumen de la ciudad')
         }
-        disabled={!consent || unavailable || loading}
+        disabled={!approvedConsent || unavailable || loading}
         onPress={() => void generate()}
       />
       <View accessibilityLiveRegion="polite" style={{ gap: 12 }}>
@@ -252,7 +350,7 @@ export function AiOutlook({
               )}
             </Copy>
           </>
-        ) : result && !unavailable && consent ? (
+        ) : result && !unavailable && approvedConsent ? (
           <Copy>
             {t(
               'This outlook expired. Generate a fresh one to use current city weather.',
@@ -268,5 +366,114 @@ export function AiOutlook({
         )}
       </Copy>
     </Card>
+  );
+}
+
+function PersonalInputReview({ input }: { input: AiPersonalInput }) {
+  const { t, lang } = useLocale();
+  const p = input.profile,
+    c = input.checkIn;
+  const missing = t('Not provided', 'Sin datos');
+  const labels: Record<string, [string, string]> = {
+    female: ['Female', 'Femenino'],
+    male: ['Male', 'Masculino'],
+    intersex: ['Intersex', 'Intersexual'],
+    unknown: ['Unknown', 'Desconocido'],
+    sedentary: ['Sedentary', 'Sedentario'],
+    'lightly-active': ['Lightly active', 'Algo activo'],
+    'very-active': ['Very active', 'Muy activo'],
+    acclimatized: ['Heat acclimatized', 'Aclimatado al calor'],
+    adequate: ['Feeling hydrated', 'Bien hidratado'],
+    unsure: ['Uncertain', 'Incierta'],
+    low: ['Need water', 'Necesito agua'],
+    resting: ['Resting', 'Reposo'],
+    light: ['Light activity', 'Actividad ligera'],
+    moderate: ['Moderate activity', 'Actividad moderada'],
+    heavy: ['Heavy / protective', 'Pesada / protectora'],
+    well: ['Feeling well', 'Me siento bien'],
+    unwell: ['Feeling unwell', 'Me siento mal'],
+    emergency: ['Emergency symptoms reported', 'Síntomas de emergencia'],
+    ordinary: ['Ordinary clothing', 'Ropa normal'],
+    cardiovascular: ['Cardiovascular condition', 'Enfermedad cardiovascular'],
+    diabetes: ['Diabetes', 'Diabetes'],
+    respiratory: ['Respiratory condition', 'Enfermedad respiratoria'],
+    kidney: ['Kidney condition', 'Enfermedad renal'],
+    'prior-heat-illness': ['Prior heat illness', 'Enfermedad previa por calor'],
+    diuretics: ['Diuretics', 'Diuréticos'],
+    'beta-blockers': ['Beta-blockers', 'Betabloqueantes'],
+    antihistamines: ['Antihistamines', 'Antihistamínicos'],
+    antipsychotics: ['Antipsychotics', 'Antipsicóticos'],
+    stimulants: ['Stimulants', 'Estimulantes'],
+    oral: ['Oral', 'Oral'],
+    ear: ['Ear', 'Oído'],
+    forehead: ['Forehead', 'Frente'],
+    wrist: ['Wrist / skin', 'Muñeca / piel'],
+    active: ['During activity', 'Durante actividad'],
+    rested: ['After quiet rest', 'Tras reposo tranquilo'],
+  };
+  const label = (v: string) => (labels[v] ? t(...labels[v]) : missing);
+  const yn = (v: boolean) => (v ? t('Yes', 'Sí') : t('Not confirmed', 'Sin confirmar'));
+  const date = (at: number) => new Date(at).toLocaleString(lang === 'es' ? 'es-US' : 'en-US');
+  const rows: [string, string][] = [
+    [t('Age', 'Edad'), p.age === undefined ? missing : String(p.age)],
+    [
+      t('Height / weight', 'Altura / peso'),
+      `${p.heightCm === undefined ? missing : p.heightCm + ' cm'} / ${p.weightKg === undefined ? missing : p.weightKg + ' kg'}`,
+    ],
+    [t('Sex (optional context)', 'Sexo (contexto opcional)'), p.sex ? label(p.sex) : missing],
+    [
+      t('Activity / workload', 'Actividad / carga de trabajo'),
+      input.workload === 'heavy' ? t('Heavy exertion', 'Esfuerzo intenso') : label(input.workload),
+    ],
+    [t('Fitness / acclimatization', 'Actividad / aclimatación'), label(p.fitness)],
+    [
+      t('Prior hydration / current hydration', 'Hidratación previa / actual'),
+      `${label(p.hydration)} / ${c ? label(c.hydration) : missing}`,
+    ],
+    [
+      t('Conditions selected', 'Condiciones seleccionadas'),
+      p.conditions.length
+        ? p.conditions.map(label).join(', ')
+        : t('None selected / not supplied', 'Ninguna seleccionada / sin datos'),
+    ],
+    [
+      t('Medication categories selected', 'Categorías de medicamentos'),
+      p.medications.length
+        ? p.medications.map(label).join(', ')
+        : t('None selected / not supplied', 'Ninguna seleccionada / sin datos'),
+    ],
+    [t('Shade / drinking water', 'Sombra / agua potable'), `${yn(p.shade)} / ${yn(p.water)}`],
+    [
+      t('Feeling / clothing', 'Estado / ropa'),
+      c ? `${label(c.feeling)} / ${label(c.clothing)}` : missing,
+    ],
+    [t('Check-in time', 'Fecha de revisión'), c ? date(c.at) : missing],
+    [
+      t('Pulse / context / reading time', 'Pulso / contexto / fecha'),
+      c?.heartRate
+        ? `${c.heartRate.bpm} bpm · ${label(c.heartRate.context)} · ${date(c.heartRate.at)}`
+        : missing,
+    ],
+    [
+      t('Temperature / method / reading time', 'Temperatura / método / fecha'),
+      c?.temperature
+        ? `${c.temperature.c}°C · ${label(c.temperature.method)} · ${date(c.temperature.at)}`
+        : missing,
+    ],
+  ];
+  return (
+    <View style={{ gap: 8 }}>
+      {rows.map(([name, value]) => (
+        <Copy key={name}>
+          {name}: {value}
+        </Copy>
+      ))}
+      <Copy>
+        {t(
+          'Metabolism is not measured. Activity is a workload proxy; body size, pulse and skin temperature cannot establish personal heat tolerance.',
+          'No se mide el metabolismo. La actividad representa carga de trabajo; tamaño corporal, pulso y temperatura cutánea no determinan tolerancia personal al calor.',
+        )}
+      </Copy>
+    </View>
   );
 }

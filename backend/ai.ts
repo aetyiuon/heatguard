@@ -1,3 +1,4 @@
+import { evaluateRisk } from '../src/domain/risk';
 import {
   AI_ACTIONS,
   AI_MODEL,
@@ -59,6 +60,7 @@ const SCHEMA = {
 };
 const INSTRUCTION = `You explain public city weather for HeatGuard, an adults-only US heat-awareness app.
 Use only supplied public data. Write exactly two short summary sentences in the requested language. Describe weather qualitatively, without digits, durations, exposure limits, personal health advice, diagnosis, safety assurances or risk ratings. In the summary do not use the words safe, safely, unsafe, hours, minutes, seguro, segura, horas or minutos. Never say it is safe to stay outside or to skip cooling. Do not invent amenities, availability, forecasts, route geometry or official alerts. Do not mention personal data: none is supplied. Choose two to four distinct action IDs from the schema, in a useful order for this weather. Actions are an app checklist, not medical advice. Return only the schema JSON. Do not use tools or external sources.`;
+const PERSONAL_INSTRUCTION = `This is an optional personal planning explanation, not a medical assessment or exposure decision. Consider every supplied field, noting missing values rather than inventing them. Use public weather and user-entered planning context only. Mention the most relevant preparation factors qualitatively. Never interpret measurements as diagnoses, determine hydration from pulse, infer metabolism/core temperature/heat tolerance from body size or wrist readings, give medication/dose advice, or increase/assign outdoor time. Sex is context only, not a reason for different time limits. Workload is an activity category, not measured metabolism. Old readings are historical. Do not repeat exact measurements, condition/medication names, or identifiers in output. Write two brief sentences in the requested language about weather and practical preparation only. The fixed action checklist is informational. This is not clinician care; health decisions remain outside this AI response.`;
 const TTL = 10 * 60_000;
 function json(data: unknown, status = 200) {
   return Response.json(data, {
@@ -90,7 +92,7 @@ export function createAiHandler(
     used = 0;
   return async (request: Request, env: AiEnv): Promise<Response> => {
     if (request.method !== 'POST') return json({ code: 'method', error: 'Use POST.' }, 405);
-    // No query strings, free text, private identifiers, profiles or GPS accepted.
+    // No query strings, free text, identifiers or GPS. Personal fields require separate consent.
     if (new URL(request.url).search)
       return json({ code: 'input', error: 'Unsupported AI input.' }, 400);
     if (!request.headers.get('Content-Type')?.startsWith('application/json'))
@@ -105,7 +107,7 @@ export function createAiHandler(
         const part = await reader.read();
         if (part.done) break;
         bytes += part.value.byteLength;
-        if (bytes > 256) {
+        if (bytes > 4096) {
           await reader.cancel();
           return json({ code: 'input', error: 'AI request too large.' }, 413);
         }
@@ -117,7 +119,7 @@ export function createAiHandler(
     }
     let input;
     try {
-      input = parseAiRequest(JSON.parse(raw));
+      input = parseAiRequest(JSON.parse(raw), now());
     } catch {
       /* normalized below */
     }
@@ -126,7 +128,7 @@ export function createAiHandler(
         {
           code: 'input',
           error:
-            'Choose a supported city and language, and confirm adult consent. No other fields are accepted.',
+            'Choose a supported city and language, and confirm adult consent. Only reviewed, consented personal fields are accepted.',
         },
         400,
       );
@@ -151,12 +153,12 @@ export function createAiHandler(
       return json({ code: 'busy', error: 'AI is busy. Try again later.' }, 429);
     attempts.set(ip, { count: (rate?.count ?? 0) + 1, until: rate?.until ?? now() + 60_000 });
     const key = `${input.city}:${input.language}`;
-    const old = cached.get(key);
+    const old = input.personal ? undefined : cached.get(key);
     if (old && Date.parse(old.expiresAt) > now()) return json(old);
     const city = input.city,
       language = input.language;
     try {
-      let work = pending.get(key);
+      let work = input.personal ? undefined : pending.get(key);
       if (!work) {
         const today = new Date(now()).toISOString().slice(0, 10);
         if (today !== day) {
@@ -185,6 +187,17 @@ export function createAiHandler(
             weather.current.humidity > 100
           )
             throw new AiFailure('weather-unavailable', 503);
+          if (
+            input.personal &&
+            evaluateRisk(
+              weather,
+              input.personal.profile,
+              input.personal.workload,
+              now(),
+              input.personal.checkIn,
+            ).stopReason
+          )
+            throw new AiFailure('personal-stop', 409);
           const publicData = {
             city: AI_CITY_NAMES[city],
             language,
@@ -202,6 +215,10 @@ export function createAiHandler(
             catalogCaveat:
               'Relief Map contains incomplete published candidate records. Facility hours, access, water flow and shade are unverified. No individual route is supplied.',
           };
+          // Personal requests are isolated: never cache, coalesce, persist or log them.
+          const modelData = input.personal
+            ? { ...publicData, personal: input.personal }
+            : publicData;
           const response = await (deps.fetch ?? fetch)(
             'https://api.groq.com/openai/v1/chat/completions',
             {
@@ -213,14 +230,40 @@ export function createAiHandler(
               body: JSON.stringify({
                 model,
                 messages: [
-                  { role: 'system', content: INSTRUCTION },
-                  { role: 'user', content: JSON.stringify(publicData) },
+                  {
+                    role: 'system',
+                    content: input.personal
+                      ? INSTRUCTION.replace(
+                          'Use only supplied public data.',
+                          'Use only supplied public weather and reviewed optional wellness inputs.',
+                        ).replace('Do not mention personal data: none is supplied.', '') +
+                        '\n' +
+                        PERSONAL_INSTRUCTION
+                      : INSTRUCTION,
+                  },
+                  { role: 'user', content: JSON.stringify(modelData) },
                 ],
                 max_completion_tokens: 1536,
                 reasoning_effort: 'low',
                 response_format: {
                   type: 'json_schema',
-                  json_schema: { name: 'city_outlook', strict: true, schema: SCHEMA },
+                  json_schema: {
+                    name: 'city_outlook',
+                    strict: true,
+                    schema: input.personal
+                      ? {
+                          ...SCHEMA,
+                          properties: {
+                            ...SCHEMA.properties,
+                            summary: {
+                              ...SCHEMA.properties.summary,
+                              description:
+                                'Two brief qualitative sentences about city weather and reviewed personal preparation factors. No numbers, durations, medical conclusions or exposure decisions.',
+                            },
+                          },
+                        }
+                      : SCHEMA,
+                  },
                 },
               }),
               signal: AbortSignal.timeout(20_000),
@@ -263,6 +306,7 @@ export function createAiHandler(
             city,
             language,
             provider: AI_PROVIDER,
+            scope: input.personal ? 'personal' : 'city',
             model,
             generatedAt: new Date(generatedAt).toISOString(),
             expiresAt: new Date(
@@ -279,10 +323,10 @@ export function createAiHandler(
               .filter((s) => typeof s === 'string' && s.length <= 300)
               .slice(0, 8),
           };
-          cached.set(key, value);
+          if (!input.personal) cached.set(key, value);
           return value;
         })();
-        pending.set(key, work);
+        if (!input.personal) pending.set(key, work);
         void work
           .finally(() => {
             if (pending.get(key) === work) pending.delete(key);

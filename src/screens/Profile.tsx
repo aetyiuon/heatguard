@@ -85,8 +85,8 @@ export function Profile({ s }: { s: HeatGuardState }) {
         />
         <Copy style={{ fontSize: 12 }}>
           {t(
-            'Optional AI city outlooks have separate consent. Health entries, wearable readings and routes are never included in AI requests.',
-            'Los resúmenes opcionales de IA tienen consentimiento separado. Los datos de salud, relojes y rutas nunca se incluyen en solicitudes de IA.',
+            'Optional personal AI mode lets you review and share your saved profile and latest check-in with Groq, with separate per-request consent. City-only mode excludes them. Routes and wearable history are never sent.',
+            'El modo personal de IA permite revisar y compartir tu perfil y última revisión con Groq, con consentimiento separado por solicitud. El modo de ciudad los excluye. Nunca se envían rutas ni historial del reloj.',
           )}
         </Copy>
       </Card>

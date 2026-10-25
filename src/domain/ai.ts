@@ -1,4 +1,5 @@
-/** The complete public-only AI contract. Never extend it with profile or route data. */
+import { AiPersonalInput, parseAiPersonal } from './aiPersonal';
+/** Public outlook plus explicitly consented, strictly projected personal wellness context. */
 export const AI_PROVIDER = 'groq' as const;
 export const AI_MODEL = 'openai/gpt-oss-20b' as const;
 export const AI_CITIES = ['arlington', 'dallas', 'fort-worth'] as const;
@@ -21,6 +22,8 @@ export interface AiRequest {
   language: 'en' | 'es';
   adult: true;
   consent: true;
+  personalConsent?: true;
+  personal?: AiPersonalInput;
 }
 export interface AiText {
   summary: string;
@@ -37,11 +40,16 @@ export interface AiOutlookResult extends AiText {
   sources: string[];
   provider: typeof AI_PROVIDER;
   model: string;
+  scope?: 'city' | 'personal';
 }
-export function parseAiRequest(value: unknown): AiRequest | null {
+export function parseAiRequest(value: unknown, now = Date.now()): AiRequest | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const v = value as Record<string, unknown>;
-  if (Object.keys(v).sort().join(',') !== 'adult,city,consent,language') return null;
+  const fields = Object.keys(v).sort().join(',');
+  const isPersonal = fields === 'adult,city,consent,language,personal,personalConsent';
+  if (fields !== 'adult,city,consent,language' && !isPersonal) return null;
+  const personal = isPersonal ? parseAiPersonal(v.personal, now) : null;
+  if (isPersonal && (v.personalConsent !== true || !personal)) return null;
   if (
     v.adult !== true ||
     v.consent !== true ||
@@ -49,7 +57,13 @@ export function parseAiRequest(value: unknown): AiRequest | null {
     !['en', 'es'].includes(v.language as string)
   )
     return null;
-  return v as unknown as AiRequest;
+  return {
+    city: v.city as AiCity,
+    language: v.language as 'en' | 'es',
+    adult: true,
+    consent: true,
+    ...(personal ? { personalConsent: true, personal } : {}),
+  };
 }
 /** Reject malformed/unexpected output; this is not medical validation of generated text. */
 export function parseAiText(value: unknown): AiText | null {
@@ -81,7 +95,12 @@ export function parseAiResult(value: unknown, now: number): AiOutlookResult | nu
   if (!parseAiText({ summary: v.summary, actions: v.actions })) return null;
   if (!AI_CITIES.includes(v.city as AiCity) || !['en', 'es'].includes(v.language as string))
     return null;
-  if (v.provider !== AI_PROVIDER || v.model !== AI_MODEL) return null;
+  if (
+    v.provider !== AI_PROVIDER ||
+    v.model !== AI_MODEL ||
+    (v.scope !== undefined && v.scope !== 'city' && v.scope !== 'personal')
+  )
+    return null;
   for (const key of ['generatedAt', 'expiresAt', 'weatherTime']) {
     if (typeof v[key] !== 'string' || !Number.isFinite(Date.parse(v[key]))) return null;
   }
