@@ -44,12 +44,33 @@ export function polygonBounds(polygons: PolygonCoordinates): CityDataset['bounds
     [180, 90, -180, -90] as CityDataset['bounds'],
   );
 }
+type DatasetName = Exclude<MappedAreaId, 'all-dfw'> | 'city-districts';
+export type CityDataLoader = (name: DatasetName) => Promise<unknown>;
+
+async function browserCityData(name: DatasetName): Promise<unknown> {
+  if (name === 'city-districts') return (await import('../data/city-districts.json')).default;
+  return name === 'fort-worth'
+    ? (await import('../data/fort-worth.json')).default
+    : name === 'dallas-county'
+      ? (await import('../data/dallas-county.json')).default
+      : name === 'tx30'
+        ? (await import('../data/tx30.json')).default
+        : name === 'tx06'
+          ? (await import('../data/tx06.json')).default
+          : name === 'arlington'
+            ? (await import('../data/arlington.json')).default
+            : (await import('../data/dallas.json')).default;
+}
+
 // Loaded only when the user opens an area map; no weather location is changed.
-export async function bundledCity(city: MappedAreaId): Promise<CityDataset> {
+export async function bundledCity(
+  city: MappedAreaId,
+  load: CityDataLoader = browserCityData,
+): Promise<CityDataset> {
   if (city === 'all-dfw') {
     const all = await Promise.all(
-      (['arlington', 'dallas', 'fort-worth', 'dallas-county', 'tx06', 'tx30'] as const).map(
-        bundledCity,
+      (['arlington', 'dallas', 'fort-worth', 'dallas-county', 'tx06', 'tx30'] as const).map((id) =>
+        bundledCity(id, load),
       ),
     );
     const boundary = all.flatMap((d) => d.boundary);
@@ -104,22 +125,10 @@ export async function bundledCity(city: MappedAreaId): Promise<CityDataset> {
       ],
     };
   }
-  const data =
-    city === 'fort-worth'
-      ? (await import('../data/fort-worth.json', { with: { type: 'json' } })).default
-      : city === 'dallas-county'
-        ? (await import('../data/dallas-county.json', { with: { type: 'json' } })).default
-        : city === 'tx30'
-          ? (await import('../data/tx30.json', { with: { type: 'json' } })).default
-          : city === 'tx06'
-            ? (await import('../data/tx06.json', { with: { type: 'json' } })).default
-            : city === 'arlington'
-              ? (await import('../data/arlington.json', { with: { type: 'json' } })).default
-              : (await import('../data/dallas.json', { with: { type: 'json' } })).default;
+  const data = await load(city);
   const dataset = data as unknown as CityDataset;
   if (city === 'arlington' || city === 'dallas' || city === 'fort-worth') {
-    const overlays = (await import('../data/city-districts.json', { with: { type: 'json' } }))
-      .default;
+    const overlays = (await load('city-districts')) as Record<string, CityDataset['regions']>;
     return {
       ...dataset,
       areaType: 'city',
