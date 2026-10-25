@@ -41,7 +41,8 @@ test('cloud feeling writes retain coarse coordinates, hashed identity, and only 
   const handler = communityHandler(settings, async (input, init) => {
     if (String(input).includes('/rpc/')) return Response.json(true);
     saved = JSON.parse(String(init?.body));
-    return new Response(null, { status: 204 });
+    // PostgREST returns 201 with an empty body for return=minimal inserts.
+    return new Response(null, { status: 201 });
   });
   const response = await handler(
     request('/community/feel', {
