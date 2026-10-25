@@ -106,19 +106,20 @@ export async function bundledCity(city: MappedAreaId): Promise<CityDataset> {
   }
   const data =
     city === 'fort-worth'
-      ? (await import('../data/fort-worth.json')).default
+      ? (await import('../data/fort-worth.json', { with: { type: 'json' } })).default
       : city === 'dallas-county'
-        ? (await import('../data/dallas-county.json')).default
+        ? (await import('../data/dallas-county.json', { with: { type: 'json' } })).default
         : city === 'tx30'
-          ? (await import('../data/tx30.json')).default
+          ? (await import('../data/tx30.json', { with: { type: 'json' } })).default
           : city === 'tx06'
-            ? (await import('../data/tx06.json')).default
+            ? (await import('../data/tx06.json', { with: { type: 'json' } })).default
             : city === 'arlington'
-              ? (await import('../data/arlington.json')).default
-              : (await import('../data/dallas.json')).default;
+              ? (await import('../data/arlington.json', { with: { type: 'json' } })).default
+              : (await import('../data/dallas.json', { with: { type: 'json' } })).default;
   const dataset = data as unknown as CityDataset;
   if (city === 'arlington' || city === 'dallas' || city === 'fort-worth') {
-    const overlays = (await import('../data/city-districts.json')).default;
+    const overlays = (await import('../data/city-districts.json', { with: { type: 'json' } }))
+      .default;
     return {
       ...dataset,
       areaType: 'city',
