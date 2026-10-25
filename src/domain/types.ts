@@ -85,6 +85,8 @@ export interface RiskEstimate {
   adjustedTemperatureF: number;
   tier: Tier;
   window: [number, number] | null;
+  /** No heat-exposure threshold is met; the window is a routine reassessment, not a heat limit. */
+  lowHeat: boolean;
   breakMinutes: number;
   reassessMinutes: number;
   reasons: string[];

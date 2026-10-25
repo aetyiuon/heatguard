@@ -43,6 +43,8 @@ import {
 import { CoolingSearchResult, findCoolingPlace, directionsUrl, mergePins } from '../domain/relief';
 import { bundledCity } from '../domain/cities';
 import { DFW_PLACES, OTHER_PLACES } from '../domain/places';
+import { resolveEmergencyNumber } from '../domain/emergency';
+import { hashForTab, tabFromHash, titleForTab } from './tabRoutes';
 import { useJourney } from './useJourney';
 import { useBiometrics } from './useBiometrics';
 export const PRESETS: Place[] = [...DFW_PLACES, ...OTHER_PLACES];
@@ -51,8 +53,28 @@ export type Sheet = 'location' | 'wardrobe' | 'symptoms' | 'method' | 'checkin' 
 export function useHeatGuard() {
   const journey = useJourney();
   const biometrics = useBiometrics();
-  const [tab, setTab] = useState<Tab>('home'),
+  const [tab, setTab] = useState<Tab>(
+      () => (Platform.OS === 'web' ? tabFromHash(window.location.hash) : undefined) ?? 'home',
+    ),
     [sheet, setSheet] = useState<Sheet>(null);
+  // On the web each tab has its own link, and Back/Forward move between tabs.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    document.title = titleForTab(tab);
+    if (tabFromHash(window.location.hash) === tab) return;
+    if (tab === 'home' && !window.location.hash) return;
+    window.history.pushState(null, '', hashForTab(tab));
+  }, [tab]);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const follow = () => setTab(tabFromHash(window.location.hash) ?? 'home');
+    window.addEventListener('popstate', follow);
+    window.addEventListener('hashchange', follow);
+    return () => {
+      window.removeEventListener('popstate', follow);
+      window.removeEventListener('hashchange', follow);
+    };
+  }, []);
   const [lang, setLang] = useState<Language>('en'),
     [large, setLarge] = useState(false);
   const [place, setPlace] = useState<Place>(PRESETS[0]!);
@@ -273,21 +295,18 @@ export function useHeatGuard() {
         throw new Error('Location declined. Enter a city or coordinates to check manually.');
       const p = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       let name = 'GPS location',
-        emergencyNumber = place.emergencyNumber;
+        country: string | null | undefined;
       try {
         const [address] = await Location.reverseGeocodeAsync(p.coords);
         name = [address?.city, address?.region].filter(Boolean).join(', ') || name;
-        const numbers: Record<string, string> = {
-          US: '911',
-          CA: '911',
-          GB: '999',
-          AU: '000',
-          NZ: '111',
-          JP: '119',
-          IN: '112',
-        };
-        if (address?.isoCountryCode) emergencyNumber = numbers[address.isoCountryCode] ?? '112';
+        country = address?.isoCountryCode;
       } catch {}
+      // Reverse geocoding is unavailable in the browser; fall back to the coordinates.
+      const emergencyNumber = resolveEmergencyNumber(
+        p.coords.latitude,
+        p.coords.longitude,
+        country,
+      );
       await changePlace({
         name,
         latitude: p.coords.latitude,
@@ -499,8 +518,8 @@ export function useHeatGuard() {
     await Share.share({
       message:
         lang === 'es'
-          ? `HeatGuard · ${place.name}\nIntervalo estimado hasta el descanso: ${risk.window ? risk.window.join('–') + ' min' : 'posponer actividad'}. Descanso: ${risk.breakMinutes} min. Estimación general, no predicción médica. Enfríate antes; ante síntomas busca ayuda. Datos: ${weather?.current.time}. https://www.cdc.gov/niosh/heat-stress/about/illnesses.html`
-          : `HeatGuard · ${place.name}\nEstimated time to a cooling break: ${risk.window ? risk.window.join('–') + ' min' : 'postpone activity'}. Cooling break: ${risk.breakMinutes} min. General guidance, not a medical prediction. Cool down early; seek help for symptoms. Data time: ${weather?.current.time}. https://www.cdc.gov/niosh/heat-stress/about/illnesses.html`,
+          ? `HeatGuard · ${place.name}\n${risk.lowHeat ? 'Por debajo de los umbrales de calor: no hacen falta descansos programados.' : `Intervalo estimado hasta el descanso: ${risk.window ? risk.window.join('–') + ' min' : 'posponer actividad'}. Descanso: ${risk.breakMinutes} min.`} Estimación general, no predicción médica. Enfríate antes; ante síntomas busca ayuda. Datos: ${weather?.current.time}. https://www.cdc.gov/niosh/heat-stress/about/illnesses.html`
+          : `HeatGuard · ${place.name}\n${risk.lowHeat ? 'Below heat thresholds: timed cooling breaks are not needed.' : `Estimated time to a cooling break: ${risk.window ? risk.window.join('–') + ' min' : 'postpone activity'}. Cooling break: ${risk.breakMinutes} min.`} General guidance, not a medical prediction. Cool down early; seek help for symptoms. Data time: ${weather?.current.time}. https://www.cdc.gov/niosh/heat-stress/about/illnesses.html`,
     });
   }
   async function saveBuddy(b: Buddy) {

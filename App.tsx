@@ -111,7 +111,7 @@ function Shell({ s }: { s: ReturnType<typeof useHeatGuard> }) {
               key={n.id}
               accessibilityRole="tab"
               accessibilityLabel={t(n.en, n.es)}
-              accessibilityState={{ selected: on }}
+              aria-selected={on}
               onPress={() => s.setTab(n.id)}
               style={vertical ? undefined : { flex: 1 }}
               face={on ? C.blueSoft : 'transparent'}

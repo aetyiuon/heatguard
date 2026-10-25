@@ -97,6 +97,7 @@ export function Journey({ s }: { s: HeatGuardState }) {
             Math.min(...risks.map((r) => r.window![1])),
           ] as [number, number]),
       stopReason: stop?.stopReason,
+      lowHeat: risks.every((r) => r.lowHeat),
       breakMinutes: Math.max(...risks.map((r) => r.breakMinutes)),
     };
   }, [weather, key, s.profile, s.workload, s.now, s.checkIn]);
@@ -579,7 +580,14 @@ export function Journey({ s }: { s: HeatGuardState }) {
                         'Alivio cercano cartografiado · revisa acceso',
                       )}
             </Copy>
-            {risk?.window ? (
+            {risk?.lowHeat ? (
+              <Copy>
+                {t(
+                  'Sampled route points are below heat thresholds: timed cooling breaks are not needed. Rest and drink water as you normally would.',
+                  'Los puntos revisados están por debajo de los umbrales de calor: no hacen falta descansos programados. Descansa y toma agua como de costumbre.',
+                )}
+              </Copy>
+            ) : risk?.window ? (
               <Copy>
                 {t('Plan a cooling break by', 'Planea descansar a los')}: {report.breakEvery} min ·{' '}
                 {t('minimum break', 'descanso mínimo')}: {risk.breakMinutes} min ·{' '}

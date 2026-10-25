@@ -7,12 +7,29 @@ import { Activity, recommendGear } from '../domain/wardrobe';
 import { SOURCES } from '../domain/sources';
 import { translatePersonalReason } from '../domain/personal';
 import { readLocal, writeLocal } from '../services/storage';
+import { resolveEmergencyNumber } from '../domain/emergency';
 export function LocationSheet({ s }: { s: HeatGuardState }) {
   const { t } = useLocale();
   const [name, setName] = useState(s.place.name),
     [lat, setLat] = useState(String(s.place.latitude)),
     [lon, setLon] = useState(String(s.place.longitude)),
-    [emergency, setEmergency] = useState(s.place.emergencyNumber);
+    [emergency, setEmergency] = useState(s.place.emergencyNumber),
+    [emergencyEdited, setEmergencyEdited] = useState(false);
+  // Suggest the number for typed coordinates until the user enters their own.
+  function changeCoordinates(nextLat: string, nextLon: string) {
+    setLat(nextLat);
+    setLon(nextLon);
+    const latitude = Number(nextLat),
+      longitude = Number(nextLon);
+    if (
+      !emergencyEdited &&
+      nextLat.trim() &&
+      nextLon.trim() &&
+      Math.abs(latitude) <= 90 &&
+      Math.abs(longitude) <= 180
+    )
+      setEmergency(resolveEmergencyNumber(latitude, longitude));
+  }
   const run = (f: () => Promise<unknown>) => void f().catch((e) => s.setError(String(e)));
   async function save() {
     const latitude = Number(lat),
@@ -74,8 +91,18 @@ export function LocationSheet({ s }: { s: HeatGuardState }) {
       </Card>
       <Field label={t('LOCATION LABEL', 'NOMBRE DEL LUGAR')} value={name} onChangeText={setName} />
       <View style={styles.row}>
-        <Field label={t('LATITUDE', 'LATITUD')} value={lat} onChangeText={setLat} numeric />
-        <Field label={t('LONGITUDE', 'LONGITUD')} value={lon} onChangeText={setLon} numeric />
+        <Field
+          label={t('LATITUDE', 'LATITUD')}
+          value={lat}
+          onChangeText={(v) => changeCoordinates(v, lon)}
+          numeric
+        />
+        <Field
+          label={t('LONGITUDE', 'LONGITUD')}
+          value={lon}
+          onChangeText={(v) => changeCoordinates(lat, v)}
+          numeric
+        />
       </View>
       <Field
         label={t(
@@ -83,7 +110,10 @@ export function LocationSheet({ s }: { s: HeatGuardState }) {
           'NÚMERO LOCAL DE EMERGENCIA · VERIFICA TU PAÍS',
         )}
         value={emergency}
-        onChangeText={setEmergency}
+        onChangeText={(v) => {
+          setEmergencyEdited(true);
+          setEmergency(v);
+        }}
         numeric
       />
       <Button

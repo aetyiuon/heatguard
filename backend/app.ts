@@ -1,6 +1,7 @@
 import { getWeather, WeatherEnv } from './weather';
 import { getRelief } from './relief';
 import { bundledCity } from '../src/domain/cities';
+import { resolveEmergencyNumber } from '../src/domain/emergency';
 import { Place, ReliefPin } from '../src/domain/types';
 interface Statement {
   bind(...values: unknown[]): Statement;
@@ -35,7 +36,7 @@ export function parsePlace(url: URL): Place {
     latitude: Math.round(lat * 1000) / 1000,
     longitude: Math.round(lon * 1000) / 1000,
     name: `${lat.toFixed(2)}, ${lon.toFixed(2)}`,
-    emergencyNumber: '911',
+    emergencyNumber: resolveEmergencyNumber(lat, lon),
   };
 }
 const localRate = new Map<string, { count: number; until: number }>();

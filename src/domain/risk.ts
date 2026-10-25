@@ -207,6 +207,9 @@ export function evaluateRisk(
     window = [lower, upper];
     rest = Math.max(rest, 60 - upper);
   }
+  // Below every heat-exposure threshold the window is a routine check-in cadence, not a heat
+  // limit, so screens can say timed cooling breaks are not needed instead of counting down.
+  const lowHeat = !stopReason && !heatExposure && adjusted < 95;
   reasons.push(
     'The displayed range and tier caps are conservative HeatGuard planning policy, not validated personal tolerance.',
   );
@@ -221,6 +224,7 @@ export function evaluateRisk(
     adjustedTemperatureF: adjusted,
     tier,
     window,
+    lowHeat,
     breakMinutes: rest,
     reassessMinutes: tier >= 2 ? 10 : 15,
     reasons,

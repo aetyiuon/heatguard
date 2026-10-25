@@ -15,6 +15,7 @@ const risk: RiskEstimate = {
   adjustedTemperatureF: 90,
   tier: 0,
   window: [45, 60],
+  lowHeat: false,
   breakMinutes: 10,
   reassessMinutes: 15,
   reasons: [],

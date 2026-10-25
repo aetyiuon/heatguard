@@ -110,6 +110,8 @@ export function Home({ s }: { s: HeatGuardState }) {
         ][r.tier]
       : { backgroundColor: C.soft, borderColor: C.line };
   const run = (f: () => Promise<unknown>) => void f().catch((e) => s.setError(String(e)));
+  // Without a session, a low-heat estimate replaces the countdown with plain guidance.
+  const lowHeat = !s.session && !!r?.lowHeat;
   const timer = s.session
     ? `${Math.floor(s.remainingSeconds / 60)
         .toString()
@@ -364,7 +366,9 @@ export function Home({ s }: { s: HeatGuardState }) {
                   ? s.session.phase === 'break'
                     ? t('Cooling break remaining', 'Descanso restante')
                     : t('Until your next cooling break', 'Hasta el próximo descanso')
-                  : t('Estimated time to a cooling break', 'Tiempo estimado hasta un descanso')}
+                  : lowHeat
+                    ? t('Timed cooling breaks', 'Descansos programados')
+                    : t('Estimated time to a cooling break', 'Tiempo estimado hasta un descanso')}
               </Copy>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
                 <Copy
@@ -372,14 +376,18 @@ export function Home({ s }: { s: HeatGuardState }) {
                   style={{
                     fontFamily: rounded,
                     fontWeight: '500',
-                    fontSize: width < 400 ? 56 : 68,
-                    lineHeight: width < 400 ? 66 : 78,
-                    letterSpacing: -3,
+                    fontSize: lowHeat ? 40 : width < 400 ? 56 : 68,
+                    lineHeight: lowHeat ? 50 : width < 400 ? 66 : 78,
+                    letterSpacing: lowHeat ? -1.5 : -3,
                   }}
                 >
-                  {r?.stopReason ? t('Pause', 'Pausa') : timer}
+                  {r?.stopReason
+                    ? t('Pause', 'Pausa')
+                    : lowHeat
+                      ? t('Not needed', 'No hacen falta')
+                      : timer}
                 </Copy>
-                {!r?.stopReason ? (
+                {!r?.stopReason && !lowHeat ? (
                   <Copy color={C.ink}>{s.session ? t('mm:ss', 'mm:ss') : t('min', 'min')}</Copy>
                 ) : null}
               </View>
@@ -392,15 +400,20 @@ export function Home({ s }: { s: HeatGuardState }) {
                         'Pospón la actividad y enfríate. Revisa las condiciones y los factores personales.',
                       ))
                     : r.stopReason
-                  : r
+                  : lowHeat
                     ? t(
-                        `For ${s.workload} activity. Take at least ${r.breakMinutes} min in shade or AC. Reassess every ${r.reassessMinutes} min.`,
-                        `Para esta actividad. Descansa al menos ${r.breakMinutes} min en sombra o aire acondicionado. Reevalúa cada ${r.reassessMinutes} min.`,
+                        'Conditions are below heat thresholds right now. Rest and drink water as you normally would, and check again if it warms up.',
+                        'Ahora las condiciones están por debajo de los umbrales de calor. Descansa y toma agua como de costumbre, y vuelve a revisar si sube la temperatura.',
                       )
-                    : t(
-                        'Tap Check now to get real weather and a break-planning estimate. No location permission required.',
-                        'Pulsa Revisar ahora para obtener datos reales y una estimación. No necesitas permiso de ubicación.',
-                      )}
+                    : r
+                      ? t(
+                          `For ${s.workload} activity. Take at least ${r.breakMinutes} min in shade or AC. Reassess every ${r.reassessMinutes} min.`,
+                          `Para esta actividad. Descansa al menos ${r.breakMinutes} min en sombra o aire acondicionado. Reevalúa cada ${r.reassessMinutes} min.`,
+                        )
+                      : t(
+                          'Tap Check now to get real weather and a break-planning estimate. No location permission required.',
+                          'Pulsa Revisar ahora para obtener datos reales y una estimación. No necesitas permiso de ubicación.',
+                        )}
               </Copy>
             </View>
             {!narrow ? <IconBadge name="clock" size={64} color={C.green} bg={C.lime} /> : null}
@@ -441,7 +454,7 @@ export function Home({ s }: { s: HeatGuardState }) {
                   onPress={() => run(s.endSession)}
                 />
               </View>
-            ) : r ? (
+            ) : lowHeat ? null : r ? (
               <Button
                 style={narrow ? { alignSelf: 'stretch' } : undefined}
                 icon="play"

@@ -186,7 +186,8 @@ export function Button({
     <RaisedPressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled, ...(expanded === undefined ? {} : { expanded }) }}
+      aria-disabled={disabled}
+      aria-expanded={expanded}
       disabled={disabled}
       onPress={onPress}
       face={face}
@@ -338,7 +339,7 @@ export function Toggle({
     <Pressable
       accessibilityRole="switch"
       accessibilityLabel={label}
-      accessibilityState={{ checked: value }}
+      aria-checked={value}
       onPress={() => onChange(!value)}
       style={({ pressed }) => [
         styles.row,

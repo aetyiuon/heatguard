@@ -96,6 +96,39 @@ test('normal cycle is a bounded app planning range, not unlimited safe exposure'
   assert.deepEqual(r.window, [45, 60]);
   assert.equal(r.breakMinutes, 10);
 });
+test('mild weather is flagged low heat while keeping the bounded planning window', () => {
+  const r = evaluateRisk(bundle({ temperatureC: 20.5, humidity: 45 }), profile, 'moderate', now);
+  assert.equal(r.lowHeat, true);
+  assert.deepEqual(r.window, [45, 60]);
+});
+test('heat exposure, official HeatRisk or a stop reason is never low heat', () => {
+  const hot = evaluateRisk(bundle({ temperatureC: 28, humidity: 40 }), profile, 'moderate', now);
+  assert.equal(hot.lowHeat, false);
+  const official = evaluateRisk(
+    bundle({ temperatureC: 20.5 }, { heatRisk: 1 }),
+    profile,
+    'moderate',
+    now,
+  );
+  assert.equal(official.lowHeat, false);
+  const stale = evaluateRisk(
+    bundle({ temperatureC: 20.5, time: new Date(now - 6 * 3600_000).toISOString() }),
+    profile,
+    'moderate',
+    now,
+  );
+  assert.ok(stale.stopReason);
+  assert.equal(stale.lowHeat, false);
+});
+test('sun and humidity can lift a mild air temperature out of low heat', () => {
+  // 79°F air at 55% RH stays below an 80°F heat index, but full sun reaches the NIOSH schedule.
+  const b = bundle({ temperatureC: 26.1, humidity: 55, cloudCover: 0, isDay: true });
+  const sun = evaluateRisk(b, { ...profile, shade: false }, 'moderate', now);
+  assert.ok(sun.heatIndexF < 80);
+  assert.ok(sun.adjustedTemperatureF >= 95);
+  assert.equal(sun.lowHeat, false);
+  assert.equal(evaluateRisk(b, profile, 'moderate', now).lowHeat, true);
+});
 test('profile concern cannot improve a recommendation', () => {
   const b = bundle({ temperatureC: 30, humidity: 50 });
   const a = evaluateRisk(b, profile, 'moderate', now);
