@@ -551,6 +551,9 @@ export function Home({ s }: { s: HeatGuardState }) {
       <PersonalSummary s={s} />
       <AiOutlook
         blocked={!!r?.stopReason || freshness !== 'current' || s.cached || s.weatherFailed}
+        personalInput={{ profile: s.profile, checkIn: s.checkIn, workload: s.workload }}
+        onProfile={() => s.setTab('profile')}
+        onCheckIn={() => s.setSheet('checkin')}
         age={s.profile.age}
         now={s.now}
         onMap={() => s.setTab('relief')}
