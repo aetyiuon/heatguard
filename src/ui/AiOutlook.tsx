@@ -44,8 +44,12 @@ const ERRORS: Record<string, [string, string]> = {
     'El resumen de Gemini solo está disponible en Estados Unidos.',
   ],
   quota: [
-    'Gemini capacity is temporarily used up. Try again later.',
-    'La capacidad de Gemini está agotada temporalmente. Inténtalo más tarde.',
+    'Gemini has no available quota right now. Weather, local checks and maps still work.',
+    'Gemini no tiene cuota disponible ahora. El tiempo, las revisiones locales y los mapas siguen funcionando.',
+  ],
+  'access-denied': [
+    'Google has not granted Gemini access to this project. Weather, local checks and maps still work.',
+    'Google no ha concedido acceso a Gemini para este proyecto. El tiempo, las revisiones locales y los mapas siguen funcionando.',
   ],
   'rate-limit': [
     'Please wait before requesting another outlook.',
