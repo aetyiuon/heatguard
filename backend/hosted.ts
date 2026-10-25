@@ -25,6 +25,10 @@ export async function hostedRequest(
   const url = new URL(request.url);
   url.pathname = `/${route}`;
   url.searchParams.delete('route');
+  // Vercel may retain the rewrite's named capture alongside its destination query.
+  // Strip only that exact public route; all other AI query fields still fail closed.
+  if (url.searchParams.getAll('path').length === 1 && url.searchParams.get('path') === route)
+    url.searchParams.delete('path');
   const headers = new Headers(request.headers);
   headers.set(
     'CF-Connecting-IP',
