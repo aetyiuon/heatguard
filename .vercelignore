@@ -1,0 +1,9 @@
+node_modules
+.expo
+work
+dist
+.env*
+.dev.vars*
+.git
+watch
+*.log

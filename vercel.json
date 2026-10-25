@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "pnpm export:web",
+  "installCommand": "npx --yes pnpm@11.25.0 install --frozen-lockfile",
+  "outputDirectory": "dist",
+  "build": { "env": { "EXPO_PUBLIC_API_URL": "/api", "EXPO_NO_TELEMETRY": "1" } },
+  "functions": {
+    "api/index.ts": { "maxDuration": 60, "includeFiles": "src/data/**" }
+  },
+  "rewrites": [{ "source": "/api/:path*", "destination": "/api?route=:path*" }],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "geolocation=(self), camera=(), microphone=()" }
+      ]
+    }
+  ]
+}
