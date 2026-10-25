@@ -63,14 +63,14 @@ async function browserCityData(name: DatasetName): Promise<unknown> {
 }
 
 // Loaded only when the user opens an area map; no weather location is changed.
-export async function bundledCity(
+export async function bundledCityWithLoader(
   city: MappedAreaId,
   load: CityDataLoader = browserCityData,
 ): Promise<CityDataset> {
   if (city === 'all-dfw') {
     const all = await Promise.all(
       (['arlington', 'dallas', 'fort-worth', 'dallas-county', 'tx06', 'tx30'] as const).map((id) =>
-        bundledCity(id, load),
+        bundledCityWithLoader(id, load),
       ),
     );
     const boundary = all.flatMap((d) => d.boundary);
@@ -136,4 +136,8 @@ export async function bundledCity(
     };
   }
   return dataset;
+}
+
+export function bundledCity(city: MappedAreaId): Promise<CityDataset> {
+  return bundledCityWithLoader(city);
 }
