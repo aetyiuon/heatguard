@@ -36,20 +36,20 @@ const ACTION_COPY: Record<AiAction, [string, string]> = {
 };
 const ERRORS: Record<string, [string, string]> = {
   'not-configured': [
-    'Gemini is not enabled yet. The app owner needs to configure its server key.',
-    'Gemini aún no está habilitado. Falta configurar la clave en el servidor.',
+    'AI is not enabled yet. The app owner needs to configure its server key.',
+    'La IA aún no está habilitada. Falta configurar la clave en el servidor.',
   ],
   region: [
-    'Gemini outlook is currently available in the United States only.',
-    'El resumen de Gemini solo está disponible en Estados Unidos.',
+    'AI outlook is currently available in the United States only.',
+    'El resumen de IA solo está disponible en Estados Unidos.',
   ],
   quota: [
-    'Gemini has no available quota right now. Weather, local checks and maps still work.',
-    'Gemini no tiene cuota disponible ahora. El tiempo, las revisiones locales y los mapas siguen funcionando.',
+    'AI has no available quota right now. Weather, local checks and maps still work.',
+    'La IA no tiene cuota disponible ahora. El tiempo, las revisiones locales y los mapas siguen funcionando.',
   ],
   'access-denied': [
-    'Google has not granted Gemini access to this project. Weather, local checks and maps still work.',
-    'Google no ha concedido acceso a Gemini para este proyecto. El tiempo, las revisiones locales y los mapas siguen funcionando.',
+    'AI provider access is unavailable. Weather, local checks and maps still work.',
+    'El acceso al proveedor de IA no está disponible. El tiempo, las revisiones locales y los mapas siguen funcionando.',
   ],
   'rate-limit': [
     'Please wait before requesting another outlook.',
@@ -139,14 +139,14 @@ export function AiOutlook({
       : null;
   return (
     <Card>
-      <Copy kind="label">{t('GEMINI / CITY OUTLOOK', 'GEMINI / RESUMEN DE LA CIUDAD')}</Copy>
+      <Copy kind="label">{t('AI / CITY OUTLOOK', 'IA / RESUMEN DE LA CIUDAD')}</Copy>
       <Copy kind="h2">
         {t('A little context before you go.', 'Un poco de contexto antes de salir.')}
       </Copy>
       <Copy>
         {t(
-          'Ask Gemini to explain public city weather and prioritize a planning checklist. This uses city-center conditions, not your exact location or personal heat estimate.',
-          'Pide a Gemini que explique el tiempo público y priorice una lista para planear. Usa el centro de la ciudad, no tu ubicación exacta ni tu estimación personal.',
+          'Get an AI explanation of public city weather and a prioritized planning checklist, powered by Groq. This uses city-center conditions, not your exact location or personal heat estimate.',
+          'Obtén una explicación del tiempo público y una lista para planear con IA de Groq. Usa el centro de la ciudad, no tu ubicación exacta ni tu estimación personal.',
         )}
       </Copy>
       <View style={styles.wrap}>
@@ -161,19 +161,19 @@ export function AiOutlook({
       </View>
       <Copy>
         {t(
-          'Only the chosen city, language and public weather go to Google. Your health entries, biometrics and routes stay out of AI requests. Google may use free-tier prompts and responses to improve its products, including human review.',
-          'Solo se envían a Google la ciudad, el idioma y el tiempo público. No se envían datos de salud, biometría ni rutas. Google puede usar solicitudes y respuestas gratuitas para mejorar sus productos, con revisión humana.',
+          'Only the chosen city, language and public weather go to Groq. Your health entries, biometrics and routes stay out of AI requests. Groq may temporarily retain request content for troubleshooting or abuse review, subject to its data controls.',
+          'Solo se envían a Groq la ciudad, el idioma y el tiempo público. No se envían datos de salud, biometría ni rutas. Groq puede guardar temporalmente las solicitudes para resolver problemas o investigar abusos, según sus controles de datos.',
         )}
       </Copy>
       <Button
         variant="quiet"
-        label={t('Google AI data terms', 'Condiciones de datos de Google AI')}
-        onPress={() => void Linking.openURL('https://ai.google.dev/gemini-api/terms')}
+        label={t('Groq data policy', 'Política de datos de Groq')}
+        onPress={() => void Linking.openURL('https://console.groq.com/docs/your-data')}
       />
       <Toggle
         label={t(
-          'I agree to this optional Google AI request (18+)',
-          'Acepto esta solicitud opcional a Google AI (18+)',
+          'I agree to this optional Groq AI request (18+)',
+          'Acepto esta solicitud opcional a la IA de Groq (18+)',
         )}
         value={consent}
         onChange={setConsent}
@@ -190,7 +190,7 @@ export function AiOutlook({
         icon="sun"
         label={
           loading
-            ? t('Asking Gemini…', 'Consultando Gemini…')
+            ? t('Generating outlook…', 'Generando resumen…')
             : t('Generate city outlook', 'Generar resumen de la ciudad')
         }
         disabled={!consent || unavailable || loading}
@@ -201,8 +201,8 @@ export function AiOutlook({
           <Copy color={C.orange}>
             {t(
               ...(ERRORS[error] ?? [
-                'Gemini could not return a usable outlook. Weather, local checks and journey tools still work.',
-                'Gemini no pudo generar un resumen válido. El tiempo, las revisiones locales y los recorridos siguen funcionando.',
+                'AI could not return a usable outlook. Weather, local checks and journey tools still work.',
+                'La IA no pudo generar un resumen válido. El tiempo, las revisiones locales y los recorridos siguen funcionando.',
               ]),
             )}
           </Copy>
@@ -247,8 +247,8 @@ export function AiOutlook({
             </View>
             <Copy>
               {t(
-                `Generated ${new Date(active.generatedAt).toLocaleTimeString()} · ${active.model}`,
-                `Generado ${new Date(active.generatedAt).toLocaleTimeString()} · ${active.model}`,
+                `Generated ${new Date(active.generatedAt).toLocaleTimeString()} · ${active.provider} · ${active.model}`,
+                `Generado ${new Date(active.generatedAt).toLocaleTimeString()} · ${active.provider} · ${active.model}`,
               )}
             </Copy>
           </>
