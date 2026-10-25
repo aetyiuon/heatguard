@@ -3,7 +3,7 @@ import { getRelief } from './relief';
 import { bundledCity } from '../src/domain/cities';
 import { resolveEmergencyNumber } from '../src/domain/emergency';
 import { Place, ReliefPin } from '../src/domain/types';
-import { aiOutlook, AiEnv } from './ai';
+import { aiOutlook, aiConfigured, AiEnv } from './ai';
 interface Statement {
   bind(...values: unknown[]): Statement;
   all<T = any>(): Promise<{ results: T[] }>;
@@ -211,9 +211,8 @@ export async function handleRequest(request: Request, env: Env = {}): Promise<Re
         response = json({
           ok: true,
           version: '0.1.0',
-          ai:
-            !!env.GEMINI_API_KEY?.trim() &&
-            (!env.GEMINI_MODEL || env.GEMINI_MODEL === 'gemini-3.5-flash-lite'),
+          ai: aiConfigured(env),
+          aiProvider: 'groq',
           community: !!env.COMMUNITY_HANDLER || (!!env.DB && !!env.COMMUNITY_SALT),
         });
       else if (url.pathname.startsWith('/community')) response = await community(request, url, env);

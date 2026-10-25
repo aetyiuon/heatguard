@@ -12,7 +12,7 @@ export async function hostedRequest(
   const route = incoming.searchParams.get('route') ?? incoming.pathname.replace(/^\/api\/?/, '');
   if (!/^(health|weather|relief|ai\/outlook|community(?:\/(?:pins|feel|vote))?)$/.test(route))
     return Response.json({ error: 'Route not found' }, { status: 404 });
-  // This free-tier launch is US-only. Vercel supplies/overwrites its geo header.
+  // Initial AI rollout is US-only. Vercel supplies/overwrites its geo header.
   if (
     route === 'ai/outlook' &&
     settings.VERCEL === '1' &&
@@ -45,8 +45,8 @@ export async function hostedRequest(
       ),
     NWS_USER_AGENT: settings.NWS_USER_AGENT ?? 'HeatGuard (https://github.com/aetyiuon/heatguard)',
     AIRNOW_API_KEY: settings.AIRNOW_API_KEY,
-    GEMINI_API_KEY: settings.GEMINI_API_KEY,
-    GEMINI_MODEL: settings.GEMINI_MODEL,
+    GROQ_API_KEY: settings.GROQ_API_KEY,
+    GROQ_MODEL: settings.GROQ_MODEL,
     MUNICIPAL_GEOJSON_URL: settings.MUNICIPAL_GEOJSON_URL,
   };
   if (settings.SUPABASE_URL && settings.SUPABASE_PUBLISHABLE_KEY) {
