@@ -1,5 +1,12 @@
 # Verification record
 
+## Groq city outlook migration - October 25, 2026
+
+- Base: production `codex/deploy-live` at `da8fbb3b5c4dff09b8f68b06883dee7e3fcb584a`; feature branch `codex/groq-live-ai`. Replaces the blocked Gemini provider with Groq's production `openai/gpt-oss-20b` model. No dependency, dataset, local risk/timer or Supabase changes.
+- TypeScript and all **168 tests passed**. Fourteen AI tests cover public-data projection, server-only Bearer credentials, strict JSON output, privacy/consent guards, model/refusal/truncation checks, rate/cache/freshness behavior, hosted routing and legacy Gemini configuration rejection. Tests use mocked provider responses, not medical validation.
+- Expo web, iOS and Android JavaScript/Hermes exports passed together to `work/groq-export`. These are not signed builds, Swift compilation or physical-device tests.
+- The owner approved Groq Free account setup and a dedicated server key stored only as Vercel Production Secret `GROQ_API_KEY`. No payment method or paid upgrade was added. Production deployment and successful real-provider/browser generation are pending verification; configuration alone does not establish that generation works.
+
 ## Optional Gemini city outlook - October 25, 2026
 
 - Base: production `codex/deploy-live` at `1f4b9ce8b175cc396241b7aebb3b0bb1f789442e`. Added an adults-only entry affirmation and opt-in Gemini city weather explanations/checklist on Today. Navy glass UI, local risk/timer algorithms, city datasets, routing, native health adapter and Supabase schema remain unchanged.
@@ -40,7 +47,6 @@
 - Browser Today showed real modeled current readings and acquisition age. Journey loaded a published 2.14 km Sublett Creek trail section, estimated 26 moving minutes, flagged missing nearby shelter/AC and fetched three actual weather samples. Browser Apple Watch connection stayed explicitly unavailable. No user GPS, private health data or contact message was used.
 - Dedicated Supabase project `ljoluomippttmxosfscz` in AgoraAI is healthy. Four community tables have RLS enabled, no direct anon/authenticated table grants, and service-backend access only. The Edge Function authenticates its API key, validates consent/payloads, hashes actor identifiers, enforces database-backed request/write limits and filters/removes expired data on feed reads. Modern publishable configuration is stored server-side on Vercel; administrator credentials remain injected inside Supabase.
 - Profiles, contacts, biometrics and recordings retain their existing local/memory behavior. No new account/profile sync is implemented. AirNow is unavailable without its optional server key. Physical iPhone/Watch, native background behavior, assistive technology and signed builds still need device acceptance. Vercel's instance-local general API cache/rate limit is not a global coordinated limit; community limits use Postgres.
-
 
 Initial scaffold checked on Windows on October 2, 2026 (America/Chicago). The city and district expansions were checked October 20, 2026 as recorded below. This is a scaffold acceptance record, not medical validation or an app-store release certification.
 
