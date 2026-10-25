@@ -84,3 +84,15 @@ test('hosted routing retains coordinate validation and method restrictions', asy
     405,
   );
 });
+
+test('hosted city API reads traced JSON and preserves city district overlays', async () => {
+  const response = await hostedRequest(
+    new Request('https://heatguard.example/api/relief?city=arlington'),
+    {},
+  );
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.city, 'arlington');
+  assert.ok(data.pins.length > 100);
+  assert.ok(data.regions.length > 0);
+});
