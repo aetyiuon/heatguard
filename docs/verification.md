@@ -2,7 +2,7 @@
 
 ## Scope of this record
 
-Production branch: **codex/deploy-live**. The consolidated baseline is `a5efa7b00e31f451b8ffb112f7bc5fc812a4d122`, the documentation handoff after QA merge [PR #8](https://github.com/aetyiuon/heatguard/pull/8), `67dc75bb22a51ea63d4d320dffdc9909355c662c`. This guide replaces overlapping handoff/QA/history documents; prior dated logs remain in [Git history](https://github.com/aetyiuon/heatguard/blob/a5efa7b00e31f451b8ffb112f7bc5fc812a4d122/VERIFICATION.md). Historical tests are not represented as new executions.
+Production branch: **production**. The consolidated baseline is `a5efa7b00e31f451b8ffb112f7bc5fc812a4d122`, the documentation handoff after QA merge [PR #8](https://github.com/aetyiuon/heatguard/pull/8), `67dc75bb22a51ea63d4d320dffdc9909355c662c`. This guide replaces overlapping handoff/QA/history documents; prior dated logs remain in [Git history](https://github.com/aetyiuon/heatguard/blob/a5efa7b00e31f451b8ffb112f7bc5fc812a4d122/VERIFICATION.md). Historical tests are not represented as new executions.
 
 ## Recorded release checks — October 25, 2026
 
@@ -53,3 +53,7 @@ Checks actually run on the cleanup source:
 - React review: active BrandMark JSX/geometry is retained; unused mascot SVG imports were removed; App.tsx changes only its import path. No hooks, props, state, events or accessibility semantics changed.
 
 This local validation does not establish a new production deployment or native physical-device acceptance. Release status belongs in the cleanup PR.
+
+## Branch naming update
+
+The repository default branch and Vercel Production branch-tracking setting were both changed to `production`. Nine existing branches were renamed by GitHub, preserving their source history. Current workflow references use the new names; historical release logs retain their original branch labels. No app code, dataset, dependency, secret, permissions or database schema was changed. Documentation link/content checks apply to this update; the earlier 191-test and platform-export results above remain historical, not newly rerun tests.
