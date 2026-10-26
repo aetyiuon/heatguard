@@ -4,4 +4,4 @@ The shared repository instructions are imported below. Edit `AGENTS.md` when a r
 
 @AGENTS.md
 
-Read `COLLABORATION.md` for branch coordination and the task handoff template. If your environment does not support file imports, open and read `AGENTS.md` explicitly before changing the project.
+Read `docs/contributing.md` for branch coordination and the task handoff template. If your environment does not support file imports, open and read `AGENTS.md` explicitly before changing the project.
