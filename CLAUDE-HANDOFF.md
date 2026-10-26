@@ -2,7 +2,7 @@
 
 ## Start from the deployed branch
 
-Repository: https://github.com/aetyiuon/heatguard (private). **`codex/deploy-live` is the production branch.** Start UI or other follow-up work from its latest clean tip, not the historical `codex-fix-nearest-ac-directions`, `claude/ui-redesign` or older `main`. Read AGENTS.md and COLLABORATION.md first. This QA task uses `codex/qa-functional-fixes`, based on production `6ff259951df320771a333752b377b42bafdda8b0`, and targets `codex/deploy-live` for integration. See QA-AUDIT.md and VERIFICATION.md for actual release status; do not assume a feature branch is deployed.
+Repository: https://github.com/aetyiuon/heatguard (private). **`codex/deploy-live` is the production branch.** Start UI or other follow-up work from its latest clean tip, not the historical `codex-fix-nearest-ac-directions`, `claude/ui-redesign` or older `main`. Read AGENTS.md and COLLABORATION.md first. This QA task was implemented on `codex/qa-functional-fixes`, based on production `6ff259951df320771a333752b377b42bafdda8b0`, and merged into `codex/deploy-live`. See QA-AUDIT.md and VERIFICATION.md for actual release status; do not assume a feature branch is deployed.
 
 In your own Git clone with no uncommitted work:
 
@@ -15,6 +15,12 @@ git switch -c claude/ui-follow-up
 ```
 
 The last branch name is an example for a new task. Preserve uncommitted work and coordinate shared files before changing branches. ZIP downloads have no Git history; never commit into an accidental parent repo. Open a PR targeting `codex/deploy-live`; never force-push shared branches. A Vercel Hobby owner integration/release is needed when collaborator commit authorship blocks deployment. Collaborators do not need the owner's Vercel, Supabase or provider keys for UI work. Do not share credentials or change repository visibility.
+
+## Verified QA release
+
+QA fixes were merged through [PR #8](https://github.com/aetyiuon/heatguard/pull/8) as `67dc75bb22a51ea63d4d320dffdc9909355c662c`. Vercel production deployment `9amD4L4KybnuB5k5ZQrZqAg1paVq` reached READY at https://heatguard-tan.vercel.app/. All 164 files in the published feature ZIP matched the tested workspace after line-ending normalization; credential-pattern scan found none. The following owner handoff commit updates documentation only. Start from the latest `codex/deploy-live`, which includes this release and its final verification notes.
+
+Post-release checks confirmed the corrected editor, rejected punctuation-only contact number, explicit saved origin in pin directions, and community sharing reset after a public-preset location change. Health endpoint returned HTTP 200 with Groq/community configuration available. A clean browser startup/editor/map session reported no console errors. Current cool weather correctly hides a new cooling-timer start; controlled hot-weather/async regression tests cover lifecycle behavior. Native delivery and actual device behavior remain unverified.
 
 ## Current product and implementation
 
@@ -42,7 +48,7 @@ The new helpers in src/domain/session.ts, mutations.ts, buddy.ts, outfits.ts and
 
 ## Validation and next step
 
-Final source: TypeScript and **191 tests passed** (174 baseline plus 17 QA regressions). Final web/iOS/Android JavaScript/Hermes exports passed to `work/qa-final-export`; post-release smoke checks are recorded in VERIFICATION.md when complete. JavaScript/Hermes exports do not establish signed builds, Swift compilation, Watch/GPS accuracy or actual notification delivery. Native permission and storage races use controlled async fixtures; physical-device acceptance remains required. No dependency, medical-method, dataset or Supabase schema changes were needed for this audit.
+Final source: TypeScript and **191 tests passed** (174 baseline plus 17 QA regressions). Final web/iOS/Android JavaScript/Hermes exports passed to `work/qa-final-export`; post-release smoke checks are recorded in VERIFICATION.md. JavaScript/Hermes exports do not establish signed builds, Swift compilation, Watch/GPS accuracy or actual notification delivery. Native permission and storage races use controlled async fixtures; physical-device acceptance remains required. No dependency, medical-method, dataset or Supabase schema changes were needed for this audit.
 
 Read QA-AUDIT.md for fixes and fresh browser checks. Before new work, inspect the latest production tip and your diff. Run `pnpm typecheck`, `pnpm test` and exports appropriate to touched platforms. For shared client changes, `pnpm exec expo export --platform all --output-dir work/claude-check` is a JavaScript/Hermes check. Use Node 24+ and pnpm 11+ with the committed lockfile. Start the local API with `pnpm proxy` and web with `pnpm web`; see README.md and IPHONE-TESTING.md for setup and honest missing-key behavior.
 
