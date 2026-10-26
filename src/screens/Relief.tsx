@@ -794,7 +794,7 @@ export function Relief({ s }: { s: HeatGuardState }) {
             <Button
               icon="arrow"
               label={t('Walking directions', 'Cómo llegar a pie')}
-              onPress={() => void Linking.openURL(directionsUrl(selected))}
+              onPress={() => void Linking.openURL(directionsUrl(selected, s.place))}
             />
             {selected.sourceUrl ? (
               <Button
@@ -919,7 +919,7 @@ export function Relief({ s }: { s: HeatGuardState }) {
               icon="arrow"
               label={t('Directions', 'Cómo llegar')}
               disabled={!usablePin(p)}
-              onPress={() => void Linking.openURL(directionsUrl(p))}
+              onPress={() => void Linking.openURL(directionsUrl(p, s.place))}
             />
             {p.sourceUrl ? (
               <Button

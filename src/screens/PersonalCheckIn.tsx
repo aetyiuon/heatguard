@@ -13,7 +13,13 @@ import {
 import { Button, Card, Chip, Copy, Field, Toggle, useLocale } from '../ui/components';
 import { C, styles } from '../ui/theme';
 
-export function PersonalSummary({ s }: { s: HeatGuardState }) {
+export function PersonalSummary({
+  s,
+  onEditProfile,
+}: {
+  s: HeatGuardState;
+  onEditProfile?: () => void;
+}) {
   const { t, lang } = useLocale();
   const heatExposure = Boolean(
     s.weather &&
@@ -109,7 +115,7 @@ export function PersonalSummary({ s }: { s: HeatGuardState }) {
         <Button
           variant="quiet"
           label={t('Edit my health profile', 'Editar mi perfil de salud')}
-          onPress={() => s.setTab('profile')}
+          onPress={onEditProfile ?? (() => s.setTab('profile'))}
         />
       </View>
       {personal.stop === 'emergency' ? (
@@ -204,8 +210,8 @@ export function PersonalCheckInSheet({ s }: { s: HeatGuardState }) {
       <Card>
         <Copy>
           {t(
-            'Health details stay on this device: encrypted storage on iOS/Android, memory only in this browser. They are never sent to the weather service.',
-            'Los datos de salud se quedan en el dispositivo: almacenamiento cifrado en iOS/Android, solo memoria en este navegador. Nunca se envían al servicio del tiempo.',
+            'Health details use encrypted storage on iOS/Android and memory only in this browser. They are never sent to the weather service. Optional personal AI sharing requires a separate snapshot review and consent on Today.',
+            'Los datos de salud usan almacenamiento cifrado en iOS/Android y solo memoria en este navegador. Nunca se envían al servicio del tiempo. Compartirlos con la IA personal requiere revisión y consentimiento separados en Hoy.',
           )}
         </Copy>
         <Toggle
