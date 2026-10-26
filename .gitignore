@@ -15,3 +15,10 @@ work/
 *.p12
 *.pem
 *.key
+
+# Local presentation/test artifacts
+/outputs/
+coverage/
+*.tsbuildinfo
+.DS_Store
+Thumbs.db

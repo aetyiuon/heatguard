@@ -36,10 +36,6 @@ Use server-only `GROQ_API_KEY` as a Vercel Production Secret. Optional `GROQ_MOD
 
 The retained hosted rollout is US-only and adults 18+; country gating fails closed on production. This is app launch policy. Strict structured output, low reasoning effort, a 1,536-token cap, a twenty-second provider timeout and no tools/search limit the provider request. Actual provider account quotas are authoritative. Five AI requests per minute per IP and a best-effort thirty-generation-per-day bound are process-local, not distributed spending controls. Only public city answers are coalesced/cached for up to ten minutes; personal requests always use isolated provider calls. Failed private requests never become canned successes.
 
-## Contributor handoff
+## Verification
 
-Personal feature base: `codex/deploy-live` at `9ab7e099ff5e4c7afb0043ec2cea180558461eaa`. Feature branch: `codex/personal-ai-inputs`. Target production `codex/deploy-live`, preserve other contributors and follow AGENTS.md/COLLABORATION.md. The user explicitly requested all supplied factors after agreeing that local calculation retains authority over minutes.
-
-Tests use fictional wellness snapshots only. They verify separate consent, nested allowlists, explicit projection, all-factor model payloads, no raw-profile response echo, no personal cache/coalescing, unchanged city-only isolation, and stop rules before provider access. See VERIFICATION.md for actual checks and live/browser outcomes. Native exports do not establish signed builds, device acceptance or medical validity.
-
-Quality follow-up: `codex/personal-ai-context-quality`, based on `656a263c6815bd587a240f97361842151d1b0080`, strengthens the backend personal explanation after live testing caught generic/overly reassuring prose. It adds no client or calculation changes.
+Tests use fictional wellness snapshots for separate consent, nested allowlists, all-factor projection, no personal cache/coalescing, city-only isolation and stop gates before provider access. See [Verification](verification.md) for real provider/UI checks and device limitations. Shared contribution rules are in [Contributing](contributing.md).

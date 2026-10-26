@@ -1,6 +1,6 @@
 # Working together with Codex and Claude
 
-Use [AGENTS.md](AGENTS.md) as the shared project guidance. Codex discovers that file; [CLAUDE.md](CLAUDE.md) imports it for Claude Code. In a plain chat without repository access, attach the relevant files and explicitly ask the assistant to read the shared instructions. Instructions provide context; they do not synchronize two chats or prevent Git conflicts automatically.
+Use [AGENTS.md](../AGENTS.md) as the shared project guidance. Codex discovers that file; [CLAUDE.md](../CLAUDE.md) imports it for Claude Code. In a plain chat without repository access, attach the relevant files and explicitly ask the assistant to read the shared instructions. Instructions provide context; they do not synchronize two chats or prevent Git conflicts automatically.
 
 ## A small-team workflow
 
@@ -23,12 +23,12 @@ Use your own task branch name. If the checkout has uncommitted work, preserve it
 
 ## Production release ownership
 
-The private repository uses Vercel Hobby hosting. GitHub collaborators do not need Vercel or Supabase credentials for app development. Their commits may be blocked from both preview and production deployment because Vercel checks commit authorship. The owner reviews and tests the actual changes, then publishes an owner-authored integration/release commit on `codex/deploy-live`. Preserve all contributor attribution and history. Do not impersonate the owner, share tokens, force-push or change the repository to public. Verify the deployment check and stable URL after the owner release. Supabase schema/function changes are a separate deployment. See [DEPLOYMENT.md](DEPLOYMENT.md).
+The private repository uses Vercel Hobby hosting. GitHub collaborators do not need Vercel or Supabase credentials for app development. Their commits may be blocked from both preview and production deployment because Vercel checks commit authorship. The owner reviews and tests the actual changes, then publishes an owner-authored integration/release commit on `codex/deploy-live`. Preserve all contributor attribution and history. Do not impersonate the owner, share tokens, force-push or change the repository to public. Verify the deployment check and stable URL after the owner release. Supabase schema/function changes are a separate deployment. See [deployment.md](deployment.md).
 
 ## A prompt either person can reuse
 
 ```text
-Read AGENTS.md and COLLABORATION.md, then inspect the current branch and diff.
+Read AGENTS.md and contributing.md, then inspect the current branch and diff.
 Task: [one concrete outcome]
 Acceptance checks: [what should work]
 Expected files/area: [scope]
@@ -65,6 +65,10 @@ Keep enduring decisions in the relevant project documentation and the shared rul
 - Do reported checks match what ran? An Expo export alone does not prove physical iPhone behavior.
 - Are the lockfile, API types, generated data, and relevant docs consistent with the change?
 
-See [README.md](README.md) for setup, [VERIFICATION.md](VERIFICATION.md) for past checks and gaps, and [IPHONE-TESTING.md](IPHONE-TESTING.md) for saved phone-testing steps.
+See [README.md](../README.md) for setup, [verification.md](verification.md) for past checks and gaps, and [iphone-testing.md](iphone-testing.md) for saved phone-testing steps.
 
 Instruction-file references: [OpenAI: AGENTS.md](https://developers.openai.com/codex/guides/agents-md), [Claude Code: project memory and imports](https://code.claude.com/docs/en/memory).
+
+## Current continuation context
+
+The production branch is `codex/deploy-live`. Read the root README and AGENTS.md, this guide, [Verification](verification.md), and the feature guide relevant to your task. Do not start from the historical nearest-AC/UI branches. Preserve the lifecycle, erasure, contact/index, location-scope and profile-editor safeguards summarized in Verification. Durable implementation rules live in AGENTS.md; task-specific handoffs belong in PR descriptions.

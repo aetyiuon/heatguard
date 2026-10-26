@@ -1,6 +1,6 @@
 param([string]$OutDir = (Join-Path $PSScriptRoot '..\assets'))
 # Windows only (System.Drawing). Regenerates PNGs from the 48-grid BrandMark geometry.
-# Keep src/ui/SunBuddy.tsx in sync; no external images or font downloads.
+# Keep src/ui/BrandMark.tsx in sync; no external images or font downloads.
 Add-Type -AssemblyName System.Drawing
 function Col($hex) { [System.Drawing.ColorTranslator]::FromHtml($hex) }
 function Draw-Mark($g, $k, $scale, $offset) {

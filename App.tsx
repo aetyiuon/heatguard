@@ -15,7 +15,7 @@ import {
 } from './src/ui/components';
 import { C, rounded, styles } from './src/ui/theme';
 import { RaisedPressable } from './src/ui/RaisedPressable';
-import { BrandMark } from './src/ui/SunBuddy';
+import { BrandMark } from './src/ui/BrandMark';
 import { GlassProvider, GlassSurface } from './src/ui/glass';
 import { SkyBackdrop } from './src/ui/SkyBackdrop';
 import { Home } from './src/screens/Home';

@@ -2,7 +2,7 @@
 
 Live app: https://heatguard-tan.vercel.app/
 
-Vercel project: `heatguard` in Andy Tran's projects (Hobby). Production follows **`codex/deploy-live`**. The deployment branch starts from Claude UI commit `bcaa154fbec49312429a5a5dc5c74d4388054fa8`; `main` still holds an older app version. Hosting changes are reviewed in [PR #2](https://github.com/aetyiuon/heatguard/pull/2).
+Vercel project: `heatguard` in Andy Tran's projects (Hobby). Production follows **`codex/deploy-live`**. Use the latest reviewed production tip; historical feature branches and `main` may contain older app versions.
 
 The Vercel deployment serves the Expo web export and the existing weather/relief API at the same HTTPS origin. Native iPhone, Android and Watch releases remain separate builds.
 
@@ -16,7 +16,7 @@ Verify `/api/health`, `/api/weather?lat=32.7902&lon=-97.116`, the Today screen, 
 
 ## Optional AI city outlook
 
-See [AI.md](AI.md) before enabling AI. Add `GROQ_API_KEY` as a server-only **Production Secret** and deploy again. The reviewed production model is `openai/gpt-oss-20b`, hosted by Groq; this needs no OpenAI API key. Keep the Groq account on its Free plan without a payment method. No paid/provider fallback is enabled. `/api/health` returns `ai` configuration status and `aiProvider`; verify an actual opt-in city outlook to confirm inference works. The previous blocked Gemini variables are unused. City-only mode sends only public weather. Personal mode separately allows reviewed saved profile/check-in fields after explicit consent; no routes, account identifiers or wearable histories are sent. All safety calculations remain local. No Supabase change is required. Per-process limits are not a global quota or spending cap.
+See [ai.md](ai.md) before enabling AI. Add `GROQ_API_KEY` as a server-only **Production Secret** and deploy again. The reviewed production model is `openai/gpt-oss-20b`, hosted by Groq; this needs no OpenAI API key. Keep the Groq account on its Free plan without a payment method. No paid/provider fallback is enabled. `/api/health` returns `ai` configuration status and `aiProvider`; verify an actual opt-in city outlook to confirm inference works. The previous blocked Gemini variables are unused. City-only mode sends only public weather. Personal mode separately allows reviewed saved profile/check-in fields after explicit consent; no routes, account identifiers or wearable histories are sent. All safety calculations remain local. No Supabase change is required. Per-process limits are not a global quota or spending cap.
 
 ## Updates
 
@@ -32,12 +32,16 @@ Community writes still require the app's explicit sharing consent. Feeling locat
 
 The core weather, map and journey flows do not require cloud profile storage. Supabase/community do not receive health profiles, route recordings or biometrics. Profiles and readings use local/memory storage unless the user separately reviews and opts into personal AI sharing with the HeatGuard server and Groq; contacts and route recordings are always excluded from AI. Hosting itself does not opt users into any sharing.
 
-## Owner release review - October 25, 2026
+## Optional Cloudflare Worker / D1 deployment
 
-Collaborator commit `89c401955a652e2b31173ed2930f3236b7ed7479` adds emergency-number suggestions, low-heat presentation, web accessibility states and hash-based tab navigation. It was downloaded and reviewed against deployed commit `dd488bc3b5e19d5df4ef7d50b70177ea87748c40`. The owner release retains that commit and changes only the deployment/collaboration handoff and verification record. It does not change account access, plan, repository visibility, server credentials or database schema.
+The Worker adapter remains an alternative backend, not the live Vercel/Supabase path. Weather works without D1. Configure exact ALLOWED_ORIGINS, a real NWS contact and server-only secrets, then run `pnpm deploy:proxy`. For Worker community writes, provision D1, bind it in `wrangler.toml`, apply `backend/schema.sql` and configure COMMUNITY_SALT. D1 setup must not be applied as PostgreSQL; `supabase/schema.sql` is the distinct production schema.
 
-Vercel's owner dashboard also blocks redeploying the original collaborator-authored commit. The supported Git eligibility rule requires the deployed tip to be authored by the Hobby team's owner. See https://vercel.com/docs/deployments/troubleshoot-project-collaboration#hobby-teams. A real owner review/integration commit must follow future collaborator changes; a collaborator push alone is not a successful deployment.
+```sh
+pnpm deploy:proxy
+npx wrangler secret put AIRNOW_API_KEY
+# Optional Worker community only, after provisioning/approval:
+npx wrangler d1 execute heatguard-community --remote --file backend/schema.sql
+npx wrangler secret put COMMUNITY_SALT
+```
 
-### Personal AI requests
-
-Personal mode uses the same server secret and requires separate in-app consent after a complete snapshot preview. Do not log request bodies or enable shared request/response caching on `/api/ai/outlook`. Personal results never enter the city cache or Supabase. Test with fictional fixtures only; never paste real health entries into deployment logs, tools or PRs. Groq Free is not a healthcare data agreement. See AI.md for the full contract, provider limits and clinical-use exclusions.
+Worker reports/pins expire from feeds; storage cleanup still needs a retention job. Configure moderation and production abuse controls before opening a new deployment. No schema, credentials or hosting configuration were changed by the repository cleanup.

@@ -28,6 +28,6 @@ Routes, GPS points and pulse remain in React memory across tabs on every platfor
 
 ## Wearable context and acceptance
 
-See [APPLE-WATCH.md](APPLE-WATCH.md). Synced HealthKit and actual Watch-workout samples keep distinct source/timestamp labels. The browser never simulates a connection. Live data requires adding the supplied Watch source to a signed Xcode target and installing it on the paired devices. Native Swift compilation, GPS hardware, permissions, lock/resume behavior, Watch data, VoiceOver/TalkBack and battery use still require device acceptance.
+See [apple-watch.md](apple-watch.md). Synced HealthKit and actual Watch-workout samples keep distinct source/timestamp labels. The browser never simulates a connection. Live data requires adding the supplied Watch source to a signed Xcode target and installing it on the paired devices. Native Swift compilation, GPS hardware, permissions, lock/resume behavior, Watch data, VoiceOver/TalkBack and battery use still require device acceptance.
 
-Reference: [Expo foreground location](https://docs.expo.dev/versions/v57.0.0/sdk/location/), [CDC heat precautions](https://www.cdc.gov/heat-health/about/), and the existing methodology in [README.md](README.md).
+Reference: [Expo foreground location](https://docs.expo.dev/versions/v57.0.0/sdk/location/), [CDC heat precautions](https://www.cdc.gov/heat-health/about/), and the existing methodology in [README.md](../README.md).
