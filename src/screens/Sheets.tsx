@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Linking, View } from 'react-native';
 import { HeatGuardState, PRESETS } from '../state/useHeatGuard';
 import { Button, Card, Chip, Copy, Field, Icon, useLocale } from '../ui/components';
 import { C, styles } from '../ui/theme';
+import { SavedOutfit, outfitSignature, saveOutfit } from '../domain/outfits';
 import { Activity, recommendGear } from '../domain/wardrobe';
 import { SOURCES } from '../domain/sources';
 import { translatePersonalReason } from '../domain/personal';
@@ -369,23 +370,44 @@ export function WardrobeSheet({ s }: { s: HeatGuardState }) {
   const { t, lang } = useLocale();
   const [activity, setActivity] = useState<Activity>('yard-work'),
     [checked, setChecked] = useState<string[]>([]),
-    [outfits, setOutfits] = useState<{ name: string; activity: Activity; items: string[] }[]>([]),
+    [outfits, setOutfits] = useState<SavedOutfit[]>([]),
     [outfitName, setOutfitName] = useState(''),
-    [saved, setSaved] = useState(false);
+    [savedSignature, setSavedSignature] = useState<string | null>(null),
+    [restoring, setRestoring] = useState(true),
+    [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const draftSignature = outfitSignature({ name: outfitName, activity, items: checked });
+  const saved = savedSignature === draftSignature;
   useEffect(() => {
-    void readLocal<typeof outfits>('outfits', []).then(setOutfits);
+    let active = true;
+    void readLocal<SavedOutfit[]>('outfits', [])
+      .then((values) => {
+        if (active) setOutfits(values);
+      })
+      .finally(() => {
+        if (active) setRestoring(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
   const gear = s.weather && s.risk ? recommendGear(s.weather, s.risk, activity) : [];
   async function save() {
+    if (restoring || savingRef.current) return;
     if (!outfitName.trim())
       throw new Error(t('Give your outfit a name.', 'Dale un nombre al conjunto.'));
-    const next = [
-      ...outfits.filter((o) => o.name !== outfitName),
-      { name: outfitName.trim(), activity, items: checked },
-    ].slice(-5);
-    await writeLocal('outfits', next);
-    setOutfits(next);
-    setSaved(true);
+    const next = saveOutfit(outfits, { name: outfitName, activity, items: checked }),
+      signature = draftSignature;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      await writeLocal('outfits', next);
+      setOutfits(next);
+      setSavedSignature(signature);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
   const run = (f: () => Promise<unknown>) => void f().catch((e) => s.setError(String(e)));
   return (
@@ -410,7 +432,7 @@ export function WardrobeSheet({ s }: { s: HeatGuardState }) {
             onPress={() => {
               setActivity(v as Activity);
               setChecked([]);
-              setSaved(false);
+              setSavedSignature(null);
             }}
           />
         ))}
@@ -467,6 +489,7 @@ export function WardrobeSheet({ s }: { s: HeatGuardState }) {
                 ? t('Outfit saved', 'Conjunto guardado')
                 : t('Save this outfit', 'Guardar este conjunto')
             }
+            disabled={restoring || saving}
             onPress={() => run(save)}
           />
         </>
@@ -487,6 +510,7 @@ export function WardrobeSheet({ s }: { s: HeatGuardState }) {
                   setActivity(o.activity);
                   setChecked(o.items);
                   setOutfitName(o.name);
+                  setSavedSignature(outfitSignature(o));
                 }}
               />
             </View>

@@ -30,7 +30,7 @@ The dedicated HeatGuard project is `ljoluomippttmxosfscz` in the user-selected A
 
 Community writes still require the app's explicit sharing consent. Feeling locations are rounded to about 1 km; shared amenity suggestions are deliberately public approximate locations. Expired pins/reports are filtered and physically removed when the feed is read (votes cascade with pins). Without traffic, expired rows can remain until the next feed read. Anonymous install IDs are not authenticated people, and rate limits are abuse friction, not proof of identity or facility status. No new user accounts or profile synchronization have been added.
 
-The core weather, map and journey flows do not require cloud profile storage. Profiles, contacts, route recordings and biometrics remain in their existing local/memory storage; hosting does not opt users into sharing them.
+The core weather, map and journey flows do not require cloud profile storage. Supabase/community do not receive health profiles, route recordings or biometrics. Profiles and readings use local/memory storage unless the user separately reviews and opts into personal AI sharing with the HeatGuard server and Groq; contacts and route recordings are always excluded from AI. Hosting itself does not opt users into any sharing.
 
 ## Owner release review - October 25, 2026
 

@@ -137,7 +137,28 @@ function HeatGuardApp() {
     <SafeAreaProvider>
       <LocaleContext.Provider value={{ lang: s.lang, large: s.large }}>
         <GlassProvider>
-          <Shell s={s} />
+          {s.initializing ? (
+            <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+              <StatusBar style="light" />
+              <View
+                accessibilityLiveRegion="polite"
+                style={{
+                  flex: 1,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  padding: 24,
+                  gap: 20,
+                }}
+              >
+                <Brand />
+                <Copy>
+                  {s.lang === 'es' ? 'Restaurando tu plan guardado…' : 'Restoring your saved plan…'}
+                </Copy>
+              </View>
+            </SafeAreaView>
+          ) : (
+            <Shell s={s} />
+          )}
         </GlassProvider>
       </LocaleContext.Provider>
     </SafeAreaProvider>

@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { createLocalWriteQueue } from '../domain/mutations';
+const localWrites = createLocalWriteQueue();
+export const localStorageVersion = () => localWrites.version;
 const volatile = new Map<string, unknown>();
 export async function readLocal<T>(key: string, fallback: T): Promise<T> {
   try {
@@ -10,8 +13,11 @@ export async function readLocal<T>(key: string, fallback: T): Promise<T> {
     return fallback;
   }
 }
-export async function writeLocal(key: string, value: unknown) {
-  await AsyncStorage.setItem(`hg.v1.${key}`, JSON.stringify(value));
+export async function writeLocal(key: string, value: unknown, version = localWrites.version) {
+  await localWrites.write(
+    () => AsyncStorage.setItem(`hg.v1.${key}`, JSON.stringify(value)),
+    version,
+  );
 }
 export async function readPrivate<T>(key: string, fallback: T): Promise<T> {
   if (Platform.OS === 'web') return (volatile.get(key) as T) ?? fallback;
@@ -35,6 +41,8 @@ export async function clearPrivate(key: string) {
   else await SecureStore.deleteItemAsync(`hg.v1.${key}`);
 }
 export async function clearLocal() {
-  const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith('hg.v1.'));
-  await AsyncStorage.multiRemove(keys);
+  await localWrites.clear(async () => {
+    const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith('hg.v1.'));
+    await AsyncStorage.multiRemove(keys);
+  });
 }

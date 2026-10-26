@@ -22,7 +22,7 @@ const MEDICINES = [
 ];
 export function Profile({ s }: { s: HeatGuardState }) {
   const { t } = useLocale();
-  const [consent, setConsent] = useState(false),
+  const [editing, setEditing] = useState(false),
     [draft, setDraft] = useState(s.profile),
     [saved, setSaved] = useState(false),
     [eraseConfirm, setEraseConfirm] = useState(false);
@@ -58,30 +58,27 @@ export function Profile({ s }: { s: HeatGuardState }) {
     <View style={{ gap: 22 }}>
       <Copy kind="label">{t('PERSONAL, WITHOUT THE PRESSURE', 'PERSONAL, SIN PRESIÓN')}</Copy>
       <Copy kind="title">{t('A plan that considers you.', 'Un plan que te tiene en cuenta.')}</Copy>
-      <PersonalSummary s={s} />
+      <PersonalSummary s={s} onEditProfile={() => setEditing(true)} />
       <Card style={{ backgroundColor: C.lime, borderColor: C.limeEdge }}>
         <Copy kind="h2">
           {t('Your health profile stays with you', 'Tu perfil de salud se queda contigo')}
         </Copy>
         <Copy color={C.ink}>
           {t(
-            'Every field is optional. On iOS and Android, profile data and trusted contacts are encrypted in device storage and are never sent to the weather proxy. The proxy receives the location you choose.',
-            'Cada campo es opcional. En iOS y Android, el perfil y los contactos se cifran en el dispositivo y nunca se envían al servidor meteorológico. El servidor recibe la ubicación elegida.',
+            'Every field is optional. Profiles and contacts use encrypted storage on iOS/Android. Ordinary weather requests send your chosen location, not these details. Optional personal AI sharing requires separate review and consent; contacts are always excluded.',
+            'Cada campo es opcional. El perfil y los contactos se cifran en iOS/Android. Las solicitudes normales del tiempo envían la ubicación, no estos datos. La IA personal requiere revisión y consentimiento separados; los contactos siempre se excluyen.',
           )}
         </Copy>
         <Copy style={{ fontSize: 12 }}>
           {t(
-            'The browser preview keeps health and contact data in memory only; they disappear on reload. Weather and map caches stay on your device. Public map tiles contact the map provider. Community sharing is a separate opt-in.',
-            'La vista del navegador guarda salud y contactos solo en memoria; se borran al recargar. Los datos del clima y mapa se guardan localmente. El mapa contacta al proveedor. Compartir en comunidad es una opción separada.',
+            'Saved profile fields continue to inform your local plan when this editor is closed. The browser preview keeps health and contact data in memory only; they disappear on reload. Weather and map caches stay on your device. Public map tiles contact the map provider. Community sharing is a separate opt-in.',
+            'Los campos guardados siguen formando parte del plan local cuando cierras el editor. La vista del navegador guarda salud y contactos solo en memoria; se borran al recargar. Los datos del clima y mapa se guardan localmente. El mapa contacta al proveedor. Compartir en comunidad es una opción separada.',
           )}
         </Copy>
         <Toggle
-          value={consent}
-          onChange={setConsent}
-          label={t(
-            'I want to use the optional local health profile',
-            'Quiero usar el perfil de salud local opcional',
-          )}
+          value={editing}
+          onChange={setEditing}
+          label={t('Show and edit my optional profile', 'Mostrar y editar mi perfil opcional')}
         />
         <Copy style={{ fontSize: 12 }}>
           {t(
@@ -90,7 +87,7 @@ export function Profile({ s }: { s: HeatGuardState }) {
           )}
         </Copy>
       </Card>
-      {consent ? (
+      {editing ? (
         <>
           <Card>
             <Copy kind="h2">{t('A few things about you', 'Algunos datos sobre ti')}</Copy>
@@ -330,7 +327,7 @@ export function Profile({ s }: { s: HeatGuardState }) {
               onPress={() =>
                 run(async () => {
                   await s.erase();
-                  setConsent(false);
+                  setEditing(false);
                   setEraseConfirm(false);
                 })
               }

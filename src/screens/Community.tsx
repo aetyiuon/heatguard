@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Linking, Platform, View } from 'react-native';
 import * as SMS from 'expo-sms';
 import { HeatGuardState, PRESETS } from '../state/useHeatGuard';
 import { Button, Card, Chip, Copy, Field, Icon, Toggle, useLocale } from '../ui/components';
 import { C, styles } from '../ui/theme';
+import { buddyPhone } from '../domain/buddy';
 import { Buddy } from '../domain/types';
 import { api, communityWrite } from '../services/api';
 import ReliefMap from '../ui/ReliefMap';
@@ -15,16 +16,34 @@ export function Community({ s }: { s: HeatGuardState }) {
     [neighbor, setNeighbor] = useState(false),
     [minutes, setMinutes] = useState('30'),
     [area, setArea] = useState(PRESETS[0]!);
-  const [sharing, setSharing] = useState(false),
-    [sent, setSent] = useState(false),
-    [reports, setReports] = useState<{ latitude: number; longitude: number; feeling: string }[]>(
-      [],
-    );
+  const locationKey = `${s.place.latitude},${s.place.longitude}`;
+  const locationRef = useRef(locationKey);
+  locationRef.current = locationKey;
+  const reportsRequest = useRef(0);
+  const reportsActive = useRef(true);
+  type Report = { latitude: number; longitude: number; feeling: string };
+  const [sharingLocation, setSharingLocation] = useState<string | null>(null);
+  const sharing = sharingLocation === locationKey;
+  const [sent, setSent] = useState(false);
+  const [reportResult, setReports] = useState<{ key: string; values: Report[] } | null>(null);
+  const reports = reportResult?.key === locationKey ? reportResult.values : [];
+  useEffect(() => {
+    reportsActive.current = true;
+    reportsRequest.current++;
+    setReports(null);
+    setSent(false);
+    setSharingLocation(null);
+    return () => {
+      reportsActive.current = false;
+      reportsRequest.current++;
+    };
+  }, [locationKey]);
   const run = (f: () => Promise<unknown>) => void f().catch((e) => s.setError(String(e)));
   async function save() {
+    const destination = buddyPhone(phone);
     if (
       !name.trim() ||
-      !/^\+?[\d ()-]{7,24}$/.test(phone) ||
+      !destination ||
       !Number.isFinite(Number(minutes)) ||
       Number(minutes) < 15 ||
       Number(minutes) > 240
@@ -38,7 +57,7 @@ export function Community({ s }: { s: HeatGuardState }) {
     await s.saveBuddy({
       id: String(Date.now()),
       name: name.trim(),
-      phone,
+      phone: destination!,
       neighbor,
       checkInMinutes: Number(minutes),
       ...(neighbor ? { place: area } : {}),
@@ -65,10 +84,13 @@ export function Community({ s }: { s: HeatGuardState }) {
       );
   }
   async function loadReports() {
-    const data = await api<{ reports: typeof reports }>(
+    const key = locationKey,
+      version = ++reportsRequest.current;
+    const data = await api<{ reports: Report[] }>(
       `/community?lat=${s.place.latitude}&lon=${s.place.longitude}`,
     );
-    setReports(data.reports);
+    if (reportsActive.current && version === reportsRequest.current && locationRef.current === key)
+      setReports({ key, values: data.reports });
   }
   async function feel(feeling: string) {
     if (!sharing)
@@ -78,11 +100,13 @@ export function Community({ s }: { s: HeatGuardState }) {
           'Acepta compartir tu ubicación aproximada antes de enviar.',
         ),
       );
+    const key = locationKey;
     await communityWrite('/community/feel', {
       latitude: s.place.latitude,
       longitude: s.place.longitude,
       feeling,
     });
+    if (!reportsActive.current || locationRef.current !== key) return;
     setSent(true);
     await loadReports();
   }
@@ -229,7 +253,7 @@ export function Community({ s }: { s: HeatGuardState }) {
         </Copy>
         <Toggle
           value={sharing}
-          onChange={setSharing}
+          onChange={(on) => setSharingLocation(on ? locationKey : null)}
           label={t(
             'I agree to share a coarse location publicly',
             'Acepto compartir públicamente mi ubicación aproximada',

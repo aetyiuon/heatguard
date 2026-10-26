@@ -1,5 +1,10 @@
 # Verification record
 
+## Functional QA and Claude handoff - October 25, 2026
+
+- Base `6ff259951df320771a333752b377b42bafdda8b0`; feature `codex/qa-functional-fixes`. Corrects confirmed lifecycle/erasure, map/directions, contact/outfit, community-scope and profile-editor/privacy bugs. No medical thresholds, datasets, dependencies, provider or Supabase schema changed. See QA-AUDIT.md for triggers and fixes; CLAUDE-HANDOFF.md now points to the canonical production branch instead of the historical UI branch.
+- Parent TypeScript and all **191 tests passed**, including 17 new QA regressions. A short initial restoration screen and cold-start notification refresh guard prevent early interaction/default-location races. Final Expo web/iOS/Android JavaScript/Hermes exports passed together to `work/qa-final-export`. Production regression checks follow deployment.
+
 ## Optional personal AI inputs - October 25, 2026
 
 - Base: `9ab7e099ff5e4c7afb0043ec2cea180558461eaa`; branch `codex/personal-ai-inputs`. Adds opt-in reviewed personal wellness context to Groq without changing the local risk/timer method. The prior city-only privacy entries below describe historical releases, not the new personal sharing mode.

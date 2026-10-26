@@ -265,6 +265,7 @@ export function Chip({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected }}
+      aria-pressed={selected}
       onPress={onPress}
       face={
         selected ? (color && /^#[0-9a-f]{6}$/i.test(color) ? `${color}18` : C.blueSoft) : C.paper
