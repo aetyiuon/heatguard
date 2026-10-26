@@ -24,7 +24,8 @@ import {
   WEATHER_FOCUS_REFRESH_MS,
   WEATHER_REFRESH_MS,
 } from '../domain/weather';
-import { sessionRemainingSeconds } from '../domain/session';
+import { createPrivateMutationQueue, createMonitoringController } from '../domain/mutations';
+import { createSessionController, sessionRemainingSeconds } from '../domain/session';
 import { fetchWeather, fetchRelief, api } from '../services/api';
 import {
   readLocal,
@@ -43,6 +44,7 @@ import {
 import { CoolingSearchResult, findCoolingPlace, directionsUrl, mergePins } from '../domain/relief';
 import { bundledCity } from '../domain/cities';
 import { DFW_PLACES, OTHER_PLACES } from '../domain/places';
+import { mutateBuddyCollection } from '../domain/buddy';
 import { resolveEmergencyNumber } from '../domain/emergency';
 import { hashForTab, tabFromHash, titleForTab } from './tabRoutes';
 import { useJourney } from './useJourney';
@@ -105,13 +107,30 @@ export function useHeatGuard() {
     [now, setNow] = useState(Date.now());
   const [buddies, setBuddies] = useState<Buddy[]>([]),
     [monitor, setMonitor] = useState<MonitorSettings | null>(null);
+  const buddiesRef = useRef<Buddy[]>([]);
   const generation = useRef(0);
+  const restoreEpoch = useRef(0);
+  const gpsGeneration = useRef(0);
   const mapGeneration = useRef(0);
   const coolingGeneration = useRef(0);
   const active = useRef(true);
+  const [privateMutations] = useState(createPrivateMutationQueue);
+  const monitorRef = useRef(monitor);
+  monitorRef.current = monitor;
+  const [monitorController] = useState(() =>
+    createMonitoringController<MonitorSettings>({
+      apply: setMonitoring,
+      current: () => monitorRef.current,
+      commit: (next) => {
+        monitorRef.current = next;
+        if (active.current) setMonitor(next);
+      },
+    }),
+  );
   useEffect(() => {
     active.current = true;
-    const restoreGeneration = generation.current;
+    const restoreGeneration = generation.current,
+      restoreVersion = restoreEpoch.current;
     void (async () => {
       const [
         savedPlace,
@@ -136,7 +155,7 @@ export function useHeatGuard() {
         readPrivate<string[]>('buddy-index', []),
         readPrivate<PersonalCheckIn | null>('check-in', null),
       ]);
-      if (!active.current) return;
+      if (!active.current || restoreVersion !== restoreEpoch.current) return;
       if (restoreGeneration === generation.current) setPlace(savedPlace);
       setLang(savedLang);
       setLarge(savedLarge);
@@ -149,12 +168,20 @@ export function useHeatGuard() {
       const contacts = await Promise.all(
         ids.map((id) => readPrivate<Buddy | null>(`buddy-${id}`, null)),
       );
-      if (active.current) setBuddies(contacts.filter((c): c is Buddy => !!c));
+      if (active.current && restoreVersion === restoreEpoch.current) {
+        buddiesRef.current = contacts.filter((c): c is Buddy => !!c);
+        setBuddies(buddiesRef.current);
+      }
       const old = await readLocal<WeatherBundle | null>(
         `weather.${savedPlace.latitude.toFixed(3)}.${savedPlace.longitude.toFixed(3)}`,
         null,
       );
-      if (active.current && old && restoreGeneration === generation.current) {
+      if (
+        active.current &&
+        restoreVersion === restoreEpoch.current &&
+        old &&
+        restoreGeneration === generation.current
+      ) {
         setWeather(old);
         setCached(true);
       }
@@ -178,33 +205,71 @@ export function useHeatGuard() {
       listener.remove();
     };
   }, [!!session]);
+  const checkedInitialNotification = useRef(false);
   useEffect(() => {
     if (Platform.OS === 'web') return;
     const show = (data: Record<string, unknown>) => {
       setTab(data.screen === 'community' ? 'community' : 'home');
-      void refresh();
+      // Cold-start notification callbacks must not replace the saved place before hydration.
+      if (weatherReady) void refresh();
     };
     const sub = Notifications.addNotificationResponseReceivedListener((r) =>
       show(r.notification.request.content.data ?? {}),
     );
-    void Notifications.getLastNotificationResponseAsync().then((r) => {
-      if (r) show(r.notification.request.content.data ?? {});
-    });
+    if (!checkedInitialNotification.current) {
+      checkedInitialNotification.current = true;
+      void Notifications.getLastNotificationResponseAsync().then((r) => {
+        if (active.current && r) show(r.notification.request.content.data ?? {});
+      });
+    }
     const link = Linking.addEventListener('url', (e) => {
       if (e.url.includes('risk')) {
         setTab('home');
-        void refresh();
+        if (weatherReady) void refresh();
       }
     });
     return () => {
       sub.remove();
       link.remove();
     };
-  }, [place.latitude, place.longitude]);
+  }, [place.latitude, place.longitude, weatherReady]);
   const risk = useMemo(
     () => (weather ? evaluateRisk(weather, profile, workload, now, checkIn) : null),
     [weather, profile, workload, now, checkIn],
   );
+  const sessionRef = useRef(session),
+    riskInputs = useRef({ weather, profile, workload, checkIn }),
+    languageRef = useRef(lang);
+  sessionRef.current = session;
+  riskInputs.current = { weather, profile, workload, checkIn };
+  languageRef.current = lang;
+  const sessionWrites = useRef(Promise.resolve());
+  const [sessionController] = useState(() =>
+    createSessionController({
+      session: () => sessionRef.current,
+      risk: () => {
+        const input = riskInputs.current;
+        return input.weather
+          ? evaluateRisk(input.weather, input.profile, input.workload, Date.now(), input.checkIn)
+          : null;
+      },
+      alive: () => active.current,
+      commit: (next) => {
+        sessionRef.current = next;
+        setSession(next);
+        setNow(Date.now());
+        sessionWrites.current = sessionWrites.current
+          .catch(() => {})
+          .then(() => writeLocal('session', next));
+        return sessionWrites.current;
+      },
+      schedule: (seconds, tier, ask) =>
+        scheduleSessionReminders(seconds, tier, languageRef.current === 'es', ask),
+      cancel: cancelReminders,
+      warning: (error) => setError(String(error)),
+    }),
+  );
+  useEffect(() => () => sessionController.invalidate(), [sessionController]);
   // Decorative backdrop for the checked place; recomputed at most once a minute.
   const sky = useMemo(
     () => skyScene(place, weather, now),
@@ -264,6 +329,15 @@ export function useHeatGuard() {
     );
   }
   async function changePlace(p: Place) {
+    gpsGeneration.current++;
+    const stopped = endSession();
+    const stoppedMonitoring = monitorController.set({
+      enabled: false,
+      place: p,
+      workload,
+      threshold: 2,
+      language: lang,
+    });
     generation.current++;
     weatherRequests.invalidate();
     mapGeneration.current++;
@@ -281,19 +355,23 @@ export function useHeatGuard() {
     setMapCached(false);
     setSheet(null);
     await writeLocal('place', p);
-    if (session) await endSession();
-    if (monitor?.enabled) {
-      await setMonitoring({ ...monitor, enabled: false });
-      setMonitor({ ...monitor, enabled: false });
-    }
+    await stopped;
+    await stoppedMonitoring;
     void refresh(p);
   }
+  useEffect(() => {
+    if (sheet !== 'location') gpsGeneration.current++;
+  }, [sheet]);
   async function useGps() {
+    const version = ++gpsGeneration.current;
+    const current = () => active.current && version === gpsGeneration.current;
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
+      if (!current()) return;
       if (!permission.granted)
         throw new Error('Location declined. Enter a city or coordinates to check manually.');
       const p = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      if (!current()) return;
       let name = 'GPS location',
         country: string | null | undefined;
       try {
@@ -301,6 +379,7 @@ export function useHeatGuard() {
         name = [address?.city, address?.region].filter(Boolean).join(', ') || name;
         country = address?.isoCountryCode;
       } catch {}
+      if (!current()) return;
       // Reverse geocoding is unavailable in the browser; fall back to the coordinates.
       const emergencyNumber = resolveEmergencyNumber(
         p.coords.latitude,
@@ -314,30 +393,43 @@ export function useHeatGuard() {
         emergencyNumber,
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (current()) setError(e instanceof Error ? e.message : String(e));
     }
   }
+  function canceledSave() {
+    return new Error(
+      lang === 'es'
+        ? 'Se canceló el guardado porque cambiaron los datos locales.'
+        : 'The save was canceled because local data changed.',
+    );
+  }
   async function saveProfile(p: Profile) {
-    await writePrivate('profile', p);
-    setProfile(p);
+    if (!(await privateMutations.run(() => writePrivate('profile', p)))) throw canceledSave();
+    if (active.current) setProfile(p);
   }
   async function saveCheckIn(next: PersonalCheckIn) {
     const timestamp = Date.now();
     if (!validCheckIn(next, timestamp))
       throw new Error('Check the personal readings and timestamps.');
-    await writePrivate('check-in', next);
-    setCheckIn(next);
-    setNow(timestamp);
+    if (!(await privateMutations.run(() => writePrivate('check-in', next)))) throw canceledSave();
+    if (active.current) {
+      setCheckIn(next);
+      setNow(timestamp);
+    }
   }
   async function clearCheckIn() {
-    await clearPrivate('check-in');
-    setCheckIn(null);
-    setNow(Date.now());
+    if (!(await privateMutations.run(() => clearPrivate('check-in')))) throw canceledSave();
+    if (active.current) {
+      setCheckIn(null);
+      setNow(Date.now());
+    }
   }
   async function chooseWork(w: Workload) {
+    const stopped = endSession();
     setWorkload(w);
     await writeLocal('workload', w);
-    if (session) await endSession();
+    await stopped;
+    await monitorController.update({ workload: w });
   }
   async function loadMap() {
     const g = ++mapGeneration.current;
@@ -414,97 +506,14 @@ export function useHeatGuard() {
       );
       return;
     }
-    const seconds = risk.window[0] * 60;
-    let ids: string[] = [];
-    try {
-      ids = await scheduleSessionReminders(seconds, risk.tier, lang === 'es');
-    } catch (e) {
-      setError(String(e));
-    }
-    const timestamp = Date.now();
-    setNow(timestamp);
-    const next: OutdoorSession = {
-      id: String(timestamp),
-      startedAt: timestamp,
-      workStartedAt: timestamp,
-      phase: 'active',
-      breaks: 0,
-      notificationIds: ids,
-    };
-    setSession(next);
-    await writeLocal('session', next);
+    await sessionController.start();
   }
-  async function endSession() {
-    if (session) await cancelReminders(session.notificationIds);
-    setSession(null);
-    await writeLocal('session', null);
-  }
-  async function takeBreak() {
-    if (!session) return;
-    await cancelReminders(session.notificationIds);
-    setNow(Date.now());
-    const next = {
-      ...session,
-      phase: 'break' as const,
-      breakStartedAt: Date.now(),
-      notificationIds: [],
-    };
-    setSession(next);
-    await writeLocal('session', next);
-  }
-  async function finishBreak() {
-    if (
-      !session ||
-      !risk?.window ||
-      !session.breakStartedAt ||
-      Date.now() - session.breakStartedAt < risk.breakMinutes * 60000
-    )
-      return;
-    let ids: string[] = [];
-    try {
-      ids = await scheduleSessionReminders(risk.window[0] * 60, risk.tier, lang === 'es');
-    } catch (e) {
-      setError(String(e));
-    }
-    setNow(Date.now());
-    const next = {
-      ...session,
-      phase: 'active' as const,
-      workStartedAt: Date.now(),
-      breakStartedAt: undefined,
-      breaks: session.breaks + 1,
-      notificationIds: ids,
-    };
-    setSession(next);
-    await writeLocal('session', next);
-  }
+  const endSession = () => sessionController.end();
+  const takeBreak = () => sessionController.takeBreak();
+  const finishBreak = () => sessionController.finishBreak();
   const remainingSeconds = session && risk ? sessionRemainingSeconds(session, risk, now) : 0;
-  // Reconcile pending notifications whenever weather/profile shortens the current recommendation.
   useEffect(() => {
-    if (!session || session.phase !== 'active' || !risk) return;
-    let disposed = false;
-    const reconcile = async () => {
-      await cancelReminders(session.notificationIds);
-      const seconds = risk.window
-        ? Math.max(1, (session.workStartedAt + risk.window[0] * 60000 - Date.now()) / 1000)
-        : 1;
-      try {
-        const ids = await scheduleSessionReminders(seconds, risk.tier, lang === 'es', false);
-        if (disposed) {
-          await cancelReminders(ids);
-          return;
-        }
-        const next = { ...session, notificationIds: ids };
-        setSession(next);
-        await writeLocal('session', next);
-      } catch {
-        /* In-app timer continues when notification permission is declined. */
-      }
-    };
-    void reconcile();
-    return () => {
-      disposed = true;
-    };
+    void sessionController.reconcile().catch((error) => setError(String(error)));
   }, [
     session?.id,
     session?.phase,
@@ -512,6 +521,7 @@ export function useHeatGuard() {
     risk?.window?.[0],
     risk?.stopReason,
     risk?.tier,
+    lang,
   ]);
   async function shareCard() {
     if (!risk) return;
@@ -522,69 +532,92 @@ export function useHeatGuard() {
           : `HeatGuard · ${place.name}\n${risk.lowHeat ? 'Below heat thresholds: timed cooling breaks are not needed.' : `Estimated time to a cooling break: ${risk.window ? risk.window.join('–') + ' min' : 'postpone activity'}. Cooling break: ${risk.breakMinutes} min.`} General guidance, not a medical prediction. Cool down early; seek help for symptoms. Data time: ${weather?.current.time}. https://www.cdc.gov/niosh/heat-stress/about/illnesses.html`,
     });
   }
-  async function saveBuddy(b: Buddy) {
-    if (!buddies.some((x) => x.id === b.id) && buddies.length >= 5)
-      throw new Error('This scaffold supports up to five trusted contacts.');
-    const next = [...buddies.filter((x) => x.id !== b.id), b];
-    await writePrivate(`buddy-${b.id}`, b);
-    await writePrivate(
-      'buddy-index',
-      next.map((x) => x.id),
+  async function changeBuddy(change: Parameters<typeof mutateBuddyCollection>[0]) {
+    await privateMutations.run(async (isCurrent) =>
+      mutateBuddyCollection(change, {
+        current: () => buddiesRef.current,
+        put: (buddy) => writePrivate(`buddy-${buddy.id}`, buddy),
+        remove: (id) => clearPrivate(`buddy-${id}`),
+        index: (ids) => writePrivate('buddy-index', ids),
+        isCurrent: () => isCurrent() && active.current,
+        commit: (next) => {
+          buddiesRef.current = next;
+          setBuddies(next);
+        },
+      }),
     );
-    setBuddies(next);
   }
-  async function removeBuddy(id: string) {
-    await clearPrivate(`buddy-${id}`);
-    const next = buddies.filter((b) => b.id !== id);
-    await writePrivate(
-      'buddy-index',
-      next.map((b) => b.id),
-    );
-    setBuddies(next);
-  }
+  const saveBuddy = (buddy: Buddy) => changeBuddy({ kind: 'save', buddy });
+  const removeBuddy = (id: string) => changeBuddy({ kind: 'remove', id });
   async function monitoring(enabled: boolean) {
     const next: MonitorSettings = { enabled, place, workload, threshold: 2, language: lang };
-    await setMonitoring(next);
-    setMonitor(next);
+    if (privateMutations.clearing)
+      throw new Error('Local-data deletion is in progress. Try again afterward.');
+    await monitorController.set(next);
   }
   async function preferences(l: Language, big: boolean) {
     setLang(l);
     setLarge(big);
     await Promise.all([writeLocal('lang', l), writeLocal('large', big)]);
-    if (monitor?.enabled) {
-      const next = { ...monitor, language: l };
-      await setMonitoring(next);
-      setMonitor(next);
-    }
+    await monitorController.update({ language: l });
   }
   async function erase() {
-    journey.clear();
-    journey.setRoute({ name: 'My route', kind: 'sketch', paths: [[]] });
-    biometrics.disconnect();
-    generation.current++;
-    weatherRequests.invalidate();
-    setLoading(false);
-    setWeatherFailed(false);
-    setLastWeatherCheckAt(null);
-    coolingGeneration.current++;
-    setCoolingRoute({ status: 'idle' });
-    await endSession();
-    if (monitor?.enabled) await setMonitoring({ ...monitor, enabled: false });
-    await clearPrivate('profile');
-    await clearPrivate('check-in');
-    for (const b of buddies) await clearPrivate(`buddy-${b.id}`);
-    await clearPrivate('buddy-index');
-    await clearLocal();
-    setProfile(DEFAULT_PROFILE);
-    setCheckIn(null);
-    setBuddies([]);
-    setLocalPins([]);
-    setWeather(null);
-    setPins([]);
-    setMapTrails([]);
-    setMonitor(null);
+    if (privateMutations.clearing) return;
+    const pendingSaves = privateMutations.beginClear();
+    try {
+      restoreEpoch.current++;
+      mapGeneration.current++;
+      gpsGeneration.current++;
+      journey.clear();
+      journey.setRoute({ name: 'My route', kind: 'sketch', paths: [[]] });
+      biometrics.disconnect();
+      generation.current++;
+      weatherRequests.invalidate();
+      setLoading(false);
+      setWeatherFailed(false);
+      setLastWeatherCheckAt(null);
+      coolingGeneration.current++;
+      setCoolingRoute({ status: 'idle' });
+      await endSession();
+      await monitorController.set({
+        enabled: false,
+        place: PRESETS[0]!,
+        workload: 'moderate',
+        threshold: 2,
+        language: 'en',
+      });
+      await pendingSaves;
+      await clearPrivate('profile');
+      await clearPrivate('check-in');
+      const savedBuddyIds = await readPrivate<string[]>('buddy-index', []);
+      for (const id of new Set([...savedBuddyIds, ...buddiesRef.current.map((b) => b.id)]))
+        await clearPrivate(`buddy-${id}`);
+      await clearPrivate('buddy-index');
+      await clearLocal();
+      setProfile(DEFAULT_PROFILE);
+      setCheckIn(null);
+      buddiesRef.current = [];
+      setBuddies([]);
+      setLocalPins([]);
+      setWeather(null);
+      setPins([]);
+      setMapTrails([]);
+      setMonitor(null);
+      setMapLoading(false);
+      setMapCached(false);
+      setMapWarnings([]);
+      setMapScope('arlington');
+      setPlace(PRESETS[0]!);
+      setWorkload('moderate');
+      setLang('en');
+      setLarge(false);
+      void refresh(PRESETS[0]!);
+    } finally {
+      privateMutations.endClear();
+    }
   }
   return {
+    initializing: !weatherReady,
     journey,
     biometrics,
     tab,
