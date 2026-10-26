@@ -2,7 +2,7 @@
 
 Live app: https://heatguard-tan.vercel.app/
 
-Vercel project: `heatguard` in Andy Tran's projects (Hobby). Production follows **`codex/deploy-live`**. Use the latest reviewed production tip; historical feature branches and `main` may contain older app versions.
+Vercel project: `heatguard` in Andy Tran's projects (Hobby). Production follows **`production`**. Use the latest reviewed production tip; historical feature branches and `main` may contain older app versions.
 
 The Vercel deployment serves the Expo web export and the existing weather/relief API at the same HTTPS origin. Native iPhone, Android and Watch releases remain separate builds.
 
@@ -20,7 +20,7 @@ See [ai.md](ai.md) before enabling AI. Add `GROQ_API_KEY` as a server-only **Pro
 
 ## Updates
 
-For Codex or Claude changes, create a feature branch from `codex/deploy-live` and open a pull request targeting `codex/deploy-live`. This private repository is hosted on a Vercel Hobby team: collaborator-authored commits are blocked from Git deployment even when pushed to the production branch. The owner must review the actual changes and publish an owner-authored integration/release commit. Keep the collaborator's original commits and attribution; do not rewrite their identity or force-push history. An owner-authored commit on the production branch triggers Vercel; verify READY and the live app before calling a release complete. Collaborator preview builds can also be blocked by the same plan restriction; local checks remain available without Vercel/Supabase access. Changes made only on `main` or `claude/ui-redesign` do not update production. Keep `vercel.json`, `api/`, the server adapter and the current lockfile when changing the UI. Supabase schema/function changes require a separate migration/function deployment; a Vercel Git push does not deploy them. Keep secrets in Vercel's encrypted environment settings, never in source or `EXPO_PUBLIC_*` values.
+For Codex or Claude changes, create a feature branch from `production` and open a pull request targeting `production`. This private repository is hosted on a Vercel Hobby team: collaborator-authored commits are blocked from Git deployment even when pushed to the production branch. The owner must review the actual changes and publish an owner-authored integration/release commit. Keep the collaborator's original commits and attribution; do not rewrite their identity or force-push history. An owner-authored commit on the production branch triggers Vercel; verify READY and the live app before calling a release complete. Collaborator preview builds can also be blocked by the same plan restriction; local checks remain available without Vercel/Supabase access. Changes made only on `main` or `design/ui-redesign` do not update production. Keep `vercel.json`, `api/`, the server adapter and the current lockfile when changing the UI. Supabase schema/function changes require a separate migration/function deployment; a Vercel Git push does not deploy them. Keep secrets in Vercel's encrypted environment settings, never in source or `EXPO_PUBLIC_*` values.
 
 ## Supabase community storage
 
