@@ -3,6 +3,7 @@ import MapView, { Marker, Circle, Polyline, Polygon, WMSTile, Region } from 'rea
 import { Text, View } from 'react-native';
 import { MapProps } from './maps.types';
 import { C } from './theme';
+import { reliefMapRegion } from '../domain/mapRegion';
 // Google Maps style for Android; Apple Maps follows userInterfaceStyle on iOS.
 const DARK_STREETS = [
   { elementType: 'geometry', stylers: [{ color: '#18242D' }] },
@@ -35,22 +36,10 @@ export default function ReliefMap({
   routeDashed = false,
 }: MapProps) {
   const map = React.useRef<MapView>(null);
-  const initialRegion = React.useMemo(() => {
-    const b = focus?.bounds ?? city?.bounds;
-    return b
-      ? {
-          latitude: (b[1] + b[3]) / 2,
-          longitude: (b[0] + b[2]) / 2,
-          latitudeDelta: Math.max(0.008, (b[3] - b[1]) * 1.3),
-          longitudeDelta: Math.max(0.008, (b[2] - b[0]) * 1.3),
-        }
-      : {
-          latitude: focus?.latitude ?? place.latitude,
-          longitude: focus?.longitude ?? place.longitude,
-          latitudeDelta: focus?.latitude ? 0.015 : 0.055,
-          longitudeDelta: focus?.longitude ? 0.015 : 0.055,
-        };
-  }, [city, focus, place.latitude, place.longitude]);
+  const initialRegion = React.useMemo(
+    () => reliefMapRegion(place, focus, city?.bounds),
+    [city, focus, place.latitude, place.longitude],
+  );
   const [region, setRegion] = React.useState<Region>(initialRegion);
   React.useEffect(() => {
     map.current?.animateToRegion(initialRegion, 300);
