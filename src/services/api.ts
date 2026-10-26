@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { Place, ReliefPin, ReliefTrail, WeatherBundle } from '../domain/types';
-import { readLocal, writeLocal } from './storage';
+import { readLocal, writeLocal, localStorageVersion } from './storage';
 export const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8787';
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const r = await fetch(`${API_BASE}${path}`, { ...options, signal: AbortSignal.timeout(45_000) });
@@ -15,11 +15,12 @@ export async function fetchWeather(
   place: Place,
   allowCache = true,
 ): Promise<{ data: WeatherBundle; cached: boolean }> {
-  const key = `weather.${areaKey(place)}`;
+  const key = `weather.${areaKey(place)}`,
+    version = localStorageVersion();
   try {
     const data = await api<WeatherBundle>(`/weather?lat=${place.latitude}&lon=${place.longitude}`);
     data.location = place;
-    await writeLocal(key, data);
+    await writeLocal(key, data, version);
     return { data, cached: false };
   } catch (e) {
     const data = allowCache ? await readLocal<WeatherBundle | null>(key, null) : null;
@@ -28,7 +29,8 @@ export async function fetchWeather(
   }
 }
 export async function fetchRelief(place: Place) {
-  const key = `relief.v2.${areaKey(place)}`;
+  const key = `relief.v2.${areaKey(place)}`,
+    version = localStorageVersion();
   try {
     const data = await api<{
       pins: ReliefPin[];
@@ -36,7 +38,7 @@ export async function fetchRelief(place: Place) {
       warnings: string[];
       fetchedAt: string;
     }>(`/relief?lat=${place.latitude}&lon=${place.longitude}`);
-    await writeLocal(key, data);
+    await writeLocal(key, data, version);
     return { ...data, cached: false };
   } catch (e) {
     const data = await readLocal<{
