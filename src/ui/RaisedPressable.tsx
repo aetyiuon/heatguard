@@ -14,6 +14,9 @@ type RaisedPressableProps = Omit<PressableProps, 'children' | 'style'> & {
   depth?: number;
   radius?: number;
   glass?: boolean;
+  /** React Native Web renders these as an ordinary anchor; native callers omit them. */
+  href?: string;
+  hrefAttrs?: { target?: string; rel?: string };
 };
 
 /** The base reserves its height, so pressing never moves neighboring controls. */
