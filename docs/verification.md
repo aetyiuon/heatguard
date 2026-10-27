@@ -1,5 +1,17 @@
 # Verification and known limits
 
+## Functional audit — October 26, 2026
+
+Based on production commit `03d0d35c1fa72ce7e847c48d308c9e13833d9b90`, branch `fix/functional-audit`.
+
+- Nearest-AC and Relief Map directions now render ordinary web links with the saved origin and selected destination. This avoids relying on a JavaScript popup that can be blocked without a rejected promise. Native builds retain the existing platform URL handler.
+- Profile number fields keep the entered text until Save, so typing `70.5` kg or `175.5` cm no longer drops the decimal separator. Saving also accepts a decimal comma and retains the existing entry bounds and optional-field clearing.
+- The unsupported browser background-monitor switch is disabled with accessible disabled state. Native monitoring behavior is unchanged.
+- Relief-distance warnings no longer treat a routine cool-weather reassessment interval as a heat exposure limit. Missing-window stop conditions and warm-weather thresholds retain their warnings.
+- TypeScript and all 195 tests passed. Expo web, iOS and Android JavaScript/Hermes exports passed. These are not signed native or physical-device tests.
+- The built web export opened Google Maps walking directions from the River Legacy public preset to Northeast Branch Library. The browser showed both endpoints and a walking route. Incremental decimal entry and Save were verified with fictional values, and the browser-only monitoring switch exposed its disabled state.
+- Production baseline checks also exercised current weather, nearest-AC lookup, mapped-trail route-weather review, forecast and a consented public-city AI outlook. No personal inputs, contact messages or community reports were submitted to cloud services during this audit. Live publication status belongs in the release PR.
+
 ## Scope of this record
 
 Production branch: **production**. The consolidated baseline is `a5efa7b00e31f451b8ffb112f7bc5fc812a4d122`, the documentation handoff after QA merge [PR #8](https://github.com/aetyiuon/heatguard/pull/8), `67dc75bb22a51ea63d4d320dffdc9909355c662c`. This guide replaces overlapping handoff/QA/history documents; prior dated logs remain in [Git history](https://github.com/aetyiuon/heatguard/blob/a5efa7b00e31f451b8ffb112f7bc5fc812a4d122/VERIFICATION.md). Historical tests are not represented as new executions.
