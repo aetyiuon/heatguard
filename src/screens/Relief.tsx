@@ -12,6 +12,7 @@ import {
   mergePins,
   pickedCoordinates,
   suggestionCoordinates,
+  reliefWalkNeedsWarning,
 } from '../domain/relief';
 import { communityWrite } from '../services/api';
 import { DFW_PLACES } from '../domain/places';
@@ -794,6 +795,7 @@ export function Relief({ s }: { s: HeatGuardState }) {
             <Button
               icon="arrow"
               label={t('Walking directions', 'Cómo llegar a pie')}
+              href={directionsUrl(selected, s.place)}
               onPress={() => void Linking.openURL(directionsUrl(selected, s.place))}
             />
             {selected.sourceUrl ? (
@@ -887,10 +889,11 @@ export function Relief({ s }: { s: HeatGuardState }) {
                   {new Date(p.sourceUpdatedAt).toLocaleDateString()}
                 </Copy>
               ) : null}
-              {s.risk &&
-              (!s.risk.window ||
-                p.walkMinutes >
-                  Math.max(0, s.session ? s.remainingSeconds / 60 : s.risk.window[0]) * 0.7) ? (
+              {reliefWalkNeedsWarning(
+                s.risk,
+                p.walkMinutes,
+                s.session ? s.remainingSeconds : undefined,
+              ) ? (
                 <Copy color={C.red} style={{ fontSize: 12 }}>
                   {t(
                     'This walk may use most of your break-planning window. Seek closer cooling or help; route length may be longer.',
@@ -919,6 +922,7 @@ export function Relief({ s }: { s: HeatGuardState }) {
               icon="arrow"
               label={t('Directions', 'Cómo llegar')}
               disabled={!usablePin(p)}
+              href={directionsUrl(p, s.place)}
               onPress={() => void Linking.openURL(directionsUrl(p, s.place))}
             />
             {p.sourceUrl ? (
