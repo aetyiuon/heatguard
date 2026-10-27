@@ -1,6 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import {
   Linking,
+  Platform,
   Pressable,
   Text,
   TextInput,
@@ -166,6 +167,7 @@ export function Button({
   disabled = false,
   expanded,
   style,
+  href,
 }: {
   label: string;
   onPress: () => void;
@@ -174,8 +176,10 @@ export function Button({
   disabled?: boolean;
   expanded?: boolean;
   style?: StyleProp<ViewStyle>;
+  href?: string;
 }) {
   const reducedTransparency = useReducedTransparency();
+  const webLink = Platform.OS === 'web' && href && !disabled;
   const [color, face, edge] = {
     primary: [reducedTransparency ? C.bg : C.ink, C.greenDeep, C.greenEdge],
     secondary: [C.blueInk, C.blueSoft, C.blueEdge],
@@ -184,12 +188,13 @@ export function Button({
   }[variant];
   return (
     <RaisedPressable
-      accessibilityRole="button"
+      accessibilityRole={webLink ? 'link' : 'button'}
       accessibilityLabel={label}
       aria-disabled={disabled}
       aria-expanded={expanded}
       disabled={disabled}
-      onPress={onPress}
+      onPress={webLink ? undefined : onPress}
+      {...(webLink ? { href, hrefAttrs: { target: '_blank', rel: 'noopener noreferrer' } } : {})}
       face={face}
       edge={edge}
       depth={2}
@@ -331,16 +336,21 @@ export function Toggle({
   label,
   value,
   onChange,
+  disabled = false,
 }: {
   label: string;
   value: boolean;
   onChange: (v: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="switch"
       accessibilityLabel={label}
       aria-checked={value}
+      aria-disabled={disabled}
+      accessibilityState={{ checked: value, disabled }}
+      disabled={disabled}
       onPress={() => onChange(!value)}
       style={({ pressed }) => [
         styles.row,
@@ -348,7 +358,7 @@ export function Toggle({
           justifyContent: 'space-between',
           minHeight: 56,
           paddingVertical: 5,
-          opacity: pressed ? 0.8 : 1,
+          opacity: disabled ? 0.48 : pressed ? 0.8 : 1,
         },
       ]}
     >

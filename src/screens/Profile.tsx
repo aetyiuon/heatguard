@@ -4,6 +4,7 @@ import { HeatGuardState } from '../state/useHeatGuard';
 import { Button, Card, Chip, Copy, Field, Toggle, useLocale } from '../ui/components';
 import { C, styles } from '../ui/theme';
 import { Profile as HealthProfile } from '../domain/types';
+import { parseProfileNumbers, profileNumberDraft, ProfileNumberDraft } from '../domain/profileForm';
 import { PersonalSummary } from './PersonalCheckIn';
 import { WearableCard } from '../ui/WearableCard';
 const CONDITIONS = [
@@ -24,34 +25,32 @@ export function Profile({ s }: { s: HeatGuardState }) {
   const { t } = useLocale();
   const [editing, setEditing] = useState(false),
     [draft, setDraft] = useState(s.profile),
+    [numbers, setNumbers] = useState(() => profileNumberDraft(s.profile)),
     [saved, setSaved] = useState(false),
     [eraseConfirm, setEraseConfirm] = useState(false);
   useEffect(() => {
     setDraft(s.profile);
+    setNumbers(profileNumberDraft(s.profile));
   }, [s.profile]);
   const run = (f: () => Promise<unknown>) => void f().catch((e) => s.setError(String(e)));
   const patch = (p: Partial<HealthProfile>) => {
     setSaved(false);
     setDraft((d) => ({ ...d, ...p }));
   };
-  function numeric(value: string, key: 'age' | 'heightCm' | 'weightKg') {
-    const n = value.trim() ? Number(value) : undefined;
-    patch({ [key]: n });
+  function numeric(value: string, key: keyof ProfileNumberDraft) {
+    setSaved(false);
+    setNumbers((previous) => ({ ...previous, [key]: value }));
   }
   async function save() {
-    for (const [v, min, max] of [
-      [draft.age, 18, 120],
-      [draft.heightCm, 40, 250],
-      [draft.weightKg, 5, 400],
-    ])
-      if (v !== undefined && (!Number.isFinite(v) || v < min! || v > max!))
-        throw new Error(
-          t(
-            'Check the optional numbers or leave them blank. HeatGuard is for adults 18+.',
-            'Revisa los números opcionales o déjalos vacíos. HeatGuard es para adultos mayores de 18 años.',
-          ),
-        );
-    await s.saveProfile(draft);
+    const parsed = parseProfileNumbers(numbers);
+    if (!parsed)
+      throw new Error(
+        t(
+          'Check the optional numbers or leave them blank. HeatGuard is for adults 18+.',
+          'Revisa los números opcionales o déjalos vacíos. HeatGuard es para adultos mayores de 18 años.',
+        ),
+      );
+    await s.saveProfile({ ...draft, ...parsed });
     setSaved(true);
   }
   return (
@@ -95,19 +94,19 @@ export function Profile({ s }: { s: HeatGuardState }) {
               <Field
                 label={t('AGE (OPTIONAL)', 'EDAD (OPCIONAL)')}
                 numeric
-                value={draft.age?.toString() ?? ''}
+                value={numbers.age}
                 onChangeText={(v) => numeric(v, 'age')}
               />
               <Field
                 label={t('HEIGHT · CM', 'ALTURA · CM')}
                 numeric
-                value={draft.heightCm?.toString() ?? ''}
+                value={numbers.heightCm}
                 onChangeText={(v) => numeric(v, 'heightCm')}
               />
               <Field
                 label={t('WEIGHT · KG', 'PESO · KG')}
                 numeric
-                value={draft.weightKg?.toString() ?? ''}
+                value={numbers.weightKg}
                 onChangeText={(v) => numeric(v, 'weightKg')}
               />
             </View>
@@ -268,6 +267,7 @@ export function Profile({ s }: { s: HeatGuardState }) {
             'Monitorear esta ubicación guardada',
           )}
           value={s.monitor?.enabled ?? false}
+          disabled={Platform.OS === 'web'}
           onChange={(v) => run(() => s.monitoring(v))}
         />
         <Copy style={{ fontSize: 12 }}>

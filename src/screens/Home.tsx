@@ -28,6 +28,7 @@ import { PersonalSummary } from './PersonalCheckIn';
 import { translatePersonalReason } from '../domain/personal';
 import { GlassSurface } from '../ui/glass';
 import { AiOutlook } from '../ui/AiOutlook';
+import { directionsUrl } from '../domain/relief';
 const SKY_LABELS: Record<SkyCondition, [string, string]> = {
   clear: ['Clear skies', 'Cielo despejado'],
   'partly-cloudy': ['Partly cloudy', 'Parcialmente nublado'],
@@ -743,6 +744,7 @@ export function Home({ s }: { s: HeatGuardState }) {
                 <Button
                   label={t('Open Google Maps directions', 'Abrir indicaciones en Google Maps')}
                   icon="arrow"
+                  href={directionsUrl(s.coolingRoute.pin, s.coolingRoute.place)}
                   onPress={() => run(s.openCoolingDirections)}
                 />
               </>
