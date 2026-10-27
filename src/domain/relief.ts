@@ -1,4 +1,18 @@
-import { Place, ReliefPin } from './types';
+import { Place, ReliefPin, RiskEstimate } from './types';
+
+export function reliefWalkNeedsWarning(
+  risk: Pick<RiskEstimate, 'lowHeat' | 'window'> | null,
+  walkMinutes: number,
+  remainingSeconds?: number,
+) {
+  if (!risk) return false;
+  if (!risk.window) return true;
+  if (risk.lowHeat) return false;
+  return (
+    walkMinutes >
+    Math.max(0, remainingSeconds === undefined ? risk.window[0] : remainingSeconds / 60) * 0.7
+  );
+}
 export function pickedCoordinates(value: unknown): Pick<Place, 'latitude' | 'longitude'> | null {
   if (!value || typeof value !== 'object') return null;
   const p = value as Record<string, unknown>;
